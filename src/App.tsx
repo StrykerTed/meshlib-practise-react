@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { useState } from 'react'
 import Navbar from './components/Navbar'
+import HelloButton from './components/HelloButton'
 import Scene from './components/Scene'
 import STLViewer from './components/STLViewer'
 import FileSelector from './components/FileSelector'
@@ -33,7 +34,7 @@ function App() {
             }}>
                 <Canvas
                     camera={{
-                        position: [-20, -320, 100],
+                        position: [120, -320, 100],
                         fov: 24,
                         near: 0.1,
                         far: 200000,
@@ -49,6 +50,8 @@ function App() {
                     {selectedFile && <STLViewer filename={selectedFile} />}
                 </Canvas>
             </div>
+
+            <HelloButton />
         </>
     )
 }
