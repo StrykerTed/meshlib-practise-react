@@ -1,0 +1,17 @@
+// Emscripten JS glue – lives in src/wasm/ and is bundled by Vite.
+// We need wildcard path declarations since workers resolve relative paths differently.
+
+declare module "*.meshlib_fill_holes.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "../wasm/meshlib_fill_holes.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "@wasm/meshlib_fill_holes.js" {
+  const createModule: any;
+  export default createModule;
+}

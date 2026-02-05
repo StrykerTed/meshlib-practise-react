@@ -1,6 +1,6 @@
 import { useLoader } from '@react-three/fiber'
 import { STLLoader } from 'three/addons/loaders/STLLoader.js'
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import * as THREE from 'three'
 
 interface STLViewerProps {

@@ -1,13 +1,18 @@
-function HelloButton() {
+interface HelloButtonProps {
+    onClick: () => void
+    disabled?: boolean
+    text?: string
+}
+
+function HelloButton({ onClick, disabled = false, text = 'Fill Holes' }: HelloButtonProps) {
     return (
         <button
             type="button"
             className="hello-button"
-            onClick={() => {
-                console.log('Fill Holes')
-            }}
+            onClick={onClick}
+            disabled={disabled}
         >
-            <span className="hello-button__text">Fill Holes</span>
+            <span className="hello-button__text">{text}</span>
         </button>
     )
 }
