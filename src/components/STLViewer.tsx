@@ -44,11 +44,14 @@ function STLViewer({ filename }: STLViewerProps) {
 
     return (
         <mesh geometry={processedGeometry} castShadow receiveShadow>
-            <meshStandardMaterial
+            <meshPhysicalMaterial
                 color="#3b82f6"
-                roughness={0.5}
-                metalness={0.1}
-                side={THREE.DoubleSide}
+                roughness={0.45}
+                metalness={0.05}
+                clearcoat={0.15}
+                clearcoatRoughness={0.4}
+                flatShading
+                side={THREE.FrontSide}
             />
         </mesh>
     )

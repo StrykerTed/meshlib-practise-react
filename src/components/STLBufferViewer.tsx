@@ -43,11 +43,14 @@ function STLBufferViewer({ data, color = '#22c55e' }: STLBufferViewerProps) {
 
     return (
         <mesh geometry={geometry} castShadow receiveShadow>
-            <meshStandardMaterial
+            <meshPhysicalMaterial
                 color={color}
-                roughness={0.5}
-                metalness={0.1}
-                side={THREE.DoubleSide}
+                roughness={0.45}
+                metalness={0.05}
+                clearcoat={0.15}
+                clearcoatRoughness={0.4}
+                flatShading
+                side={THREE.FrontSide}
             />
         </mesh>
     )

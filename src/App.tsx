@@ -11,6 +11,7 @@ import { FillHolesClient } from './lib/fillHolesClient'
 
 // List of STL files available in /stl directory
 const STL_FILES = [
+    'baseplate_shoulder_holes.stl',
     'ball_with_missing_faces.stl',
     'icosphere_with_holes.stl',
 ]

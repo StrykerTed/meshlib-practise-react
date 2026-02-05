@@ -58,14 +58,25 @@ function Scene() {
                 shadow-camera-right={250}
                 shadow-camera-top={250}
                 shadow-camera-bottom={-250}
-                // Reduce shadow acne / banding
-                shadow-bias={-0.0002}
-                shadow-normalBias={0.02}
+                shadow-bias={-0.0005}
+                shadow-normalBias={0.05}
+            />
+
+            <directionalLight
+                color={0xffffff}
+                position={[-30, 40, 60]}
+                intensity={0.2}
+            />
+
+            <directionalLight
+                color={0xccddff}
+                position={[0, 50, -80]}
+                intensity={0.35}
             />
 
             <mesh rotation={[0, 0, 0]} position={[0, 0, -0.04]} receiveShadow>
                 <planeGeometry args={[210, 210]} />
-                <meshStandardMaterial color="#111827" roughness={1} side={THREE.DoubleSide} />
+                <meshStandardMaterial color="#111827" roughness={1} />
             </mesh>
 
             <OrbitControls
