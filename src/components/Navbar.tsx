@@ -2,9 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { COLORS } from '../constants/colors'
 
 interface NavbarProps {
-    /** Page title shown in the centre. Defaults to the site name. */
     pageTitle?: string
-    /** Show a ← Back button on the left that navigates home. */
     showBack?: boolean
 }
 
@@ -29,7 +27,6 @@ function Navbar({ pageTitle = 'MeshLib WASM Experiments', showBack = false }: Na
                 boxSizing: 'border-box',
             }}
         >
-            {/* Left slot */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 160 }}>
                 <img
                     src="/images/logo.svg"
@@ -40,36 +37,19 @@ function Navbar({ pageTitle = 'MeshLib WASM Experiments', showBack = false }: Na
                     <button
                         type="button"
                         onClick={() => navigate('/')}
+                        className="hello-button"
                         style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            background: 'none',
-                            border: '1px solid rgba(148,163,184,0.25)',
-                            borderRadius: 8,
-                            color: '#94a3b8',
-                            fontSize: 13,
-                            fontWeight: 500,
-                            padding: '6px 14px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            fontFamily: 'inherit',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.color = '#e2e8f0'
-                            e.currentTarget.style.borderColor = 'rgba(148,163,184,0.5)'
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.color = '#94a3b8'
-                            e.currentTarget.style.borderColor = 'rgba(148,163,184,0.25)'
+                            padding: '6px 16px',
+                            fontSize: '0.8rem',
+                            borderRadius: 10,
+                            letterSpacing: 0.5,
                         }}
                     >
-                        ← Back
+                        <span className="hello-button__text">← Back</span>
                     </button>
                 )}
             </div>
 
-            {/* Centre title */}
             <h1
                 style={{
                     color: COLORS.sykloneYellow,
@@ -85,7 +65,6 @@ function Navbar({ pageTitle = 'MeshLib WASM Experiments', showBack = false }: Na
                 {pageTitle}
             </h1>
 
-            {/* Right slot (spacer for symmetry) */}
             <div style={{ minWidth: 160 }} />
         </nav>
     )
