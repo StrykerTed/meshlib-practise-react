@@ -15,3 +15,18 @@ declare module "@wasm/meshlib_fill_holes.js" {
   const createModule: any;
   export default createModule;
 }
+
+declare module "*.meshlib_self_intersections.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "../wasm/meshlib_self_intersections.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "@wasm/meshlib_self_intersections.js" {
+  const createModule: any;
+  export default createModule;
+}
