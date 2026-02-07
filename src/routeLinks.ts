@@ -15,6 +15,6 @@ export const routeLinks: RouteLink[] = [
         title: 'Simplification',
         path: '/simplification',
         description:
-            'Reduce triangle count while preserving mesh quality — coming soon.',
+            'Reduce triangle count using quadric error metric simplification with adjustable target ratio.',
     },
 ]

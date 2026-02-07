@@ -30,3 +30,18 @@ declare module "@wasm/meshlib_self_intersections.js" {
   const createModule: any;
   export default createModule;
 }
+
+declare module "*.meshlib_simplification.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "../wasm/meshlib_simplification.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "@wasm/meshlib_simplification.js" {
+  const createModule: any;
+  export default createModule;
+}

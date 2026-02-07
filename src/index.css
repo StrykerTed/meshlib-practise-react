@@ -198,3 +198,48 @@ body {
     color: #fbbf24;
     transform: translateX(4px);
 }
+
+/* ---- WASM processing spinner ---- */
+
+@keyframes spin-ring {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0.6; }
+    50%      { opacity: 1; }
+}
+
+.wasm-spinner-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+}
+
+.wasm-spinner-ring {
+    width: 64px;
+    height: 64px;
+    border: 4px solid rgba(255, 181, 0, 0.15);
+    border-top-color: #FFB500;
+    border-radius: 50%;
+    animation: spin-ring 0.9s linear infinite;
+}
+
+.wasm-spinner-label {
+    color: #FFB500;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    animation: pulse-glow 1.6s ease-in-out infinite;
+    text-align: center;
+    max-width: 340px;
+}
