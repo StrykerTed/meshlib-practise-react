@@ -1,36 +1,44 @@
+import { Canvas } from '@react-three/fiber'
+import { useState } from 'react'
 import Navbar from '../components/Navbar'
+import Scene from '../components/Scene'
+import STLViewer from '../components/STLViewer'
+import FileSelector from '../components/FileSelector'
+import { CanvasContainer } from '../styles/CanvasContainer'
+
+const COMPLEX_STL_FILES = [
+    'complex/Duck_mesh.stl',
+    'complex/UNICORN_mesh_NoTexture.stl',
+    'complex/Warrior with Hammer pose 2_28mm_supported.stl',
+]
 
 function SimplificationPage() {
+    const [selectedFile, setSelectedFile] = useState<string>(COMPLEX_STL_FILES[0] ?? '')
+
     return (
         <>
             <Navbar pageTitle="Simplification" showBack />
-            <div style={{
-                paddingTop: 120,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 16,
-                color: '#94a3b8',
-            }}>
-                <h2 style={{ color: '#e2e8f0', fontWeight: 400, fontSize: 28 }}>
-                    Mesh Simplification
-                </h2>
-                <p style={{ maxWidth: 480, textAlign: 'center', lineHeight: 1.6 }}>
-                    Reduce triangle count while preserving mesh quality.
-                    This page is a placeholder — implementation coming soon.
-                </p>
-                <div style={{
-                    marginTop: 24,
-                    padding: '12px 24px',
-                    borderRadius: 12,
-                    border: '1px solid rgba(148,163,184,0.15)',
-                    background: 'rgba(15,23,42,0.5)',
-                    fontSize: 13,
-                    color: '#64748b',
-                }}>
-                    🚧 Under construction
-                </div>
-            </div>
+            <FileSelector
+                files={COMPLEX_STL_FILES}
+                selectedFile={selectedFile}
+                onFileSelect={setSelectedFile}
+            />
+            <CanvasContainer>
+                <Canvas
+                    camera={{
+                        position: [120, -320, 100],
+                        fov: 24,
+                        near: 0.1,
+                        far: 200000,
+                    }}
+                    shadows
+                    gl={{ antialias: true, alpha: false }}
+                    style={{ width: '100%', height: '100%', background: '#0a0a0a' }}
+                >
+                    <Scene />
+                    {selectedFile && <STLViewer filename={selectedFile} />}
+                </Canvas>
+            </CanvasContainer>
         </>
     )
 }

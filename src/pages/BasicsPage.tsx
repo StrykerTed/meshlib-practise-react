@@ -10,6 +10,7 @@ import STLBufferViewer from '../components/STLBufferViewer'
 import IntersectionLines from '../components/IntersectionLines'
 import { FillHolesClient } from '../lib/fillHolesClient'
 import { SelfIntersectionsClient } from '../lib/selfIntersectionsClient'
+import { CanvasContainer } from '../styles/CanvasContainer'
 
 const STL_FILES = [
     'baseplate_shoulder_holes.stl',
@@ -170,15 +171,7 @@ function BasicsPage() {
                     {error && <div style={{ color: '#fca5a5' }}><strong>Error:</strong> {error}</div>}
                 </div>
             )}
-            <div style={{
-                position: 'absolute',
-                top: '80px',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: '100%',
-                height: 'calc(100vh - 80px)',
-            }}>
+            <CanvasContainer>
                 <Canvas
                     camera={{
                         position: [120, -320, 100],
@@ -234,7 +227,7 @@ function BasicsPage() {
                         </group>
                     )}
                 </Canvas>
-            </div>
+            </CanvasContainer>
 
             {/* ---- Action buttons ---- */}
             <div style={{

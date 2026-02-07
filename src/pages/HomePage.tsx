@@ -83,12 +83,11 @@ function HomePage() {
                     ))}
                 </div>
 
-                {/* ---- Footer ---- */}
                 <div style={{
                     marginTop: 'auto',
                     paddingTop: 60,
                     paddingBottom: 24,
-                    color: '#334155',
+                    color: '#64748b',
                     fontSize: 12,
                     textAlign: 'center',
                 }}>
