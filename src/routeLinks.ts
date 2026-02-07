@@ -23,4 +23,10 @@ export const routeLinks: RouteLink[] = [
     description:
       "Apply Laplacian, Taubin, HC, or Tangential Relaxation smoothing with configurable iterations and weights.",
   },
+  {
+    title: "Annotations",
+    path: "/annotations",
+    description:
+      "Define patches, landmarks, and contours on a mesh surface using barycentric coordinates that survive deformations.",
+  },
 ];

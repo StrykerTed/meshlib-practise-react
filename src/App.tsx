@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage'
 import BasicsPage from './pages/BasicsPage'
 import SimplificationPage from './pages/SimplificationPage'
 import SmoothingPage from './pages/SmoothingPage'
+import AnnotationsPage from './pages/AnnotationsPage'
 
 function App() {
     return (
@@ -12,6 +13,7 @@ function App() {
                 <Route path="/basics" element={<BasicsPage />} />
                 <Route path="/simplification" element={<SimplificationPage />} />
                 <Route path="/smoothing" element={<SmoothingPage />} />
+                <Route path="/annotations" element={<AnnotationsPage />} />
             </Routes>
         </BrowserRouter>
     )
