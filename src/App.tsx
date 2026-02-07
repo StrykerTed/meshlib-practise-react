@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import BasicsPage from './pages/BasicsPage'
 import SimplificationPage from './pages/SimplificationPage'
+import SmoothingPage from './pages/SmoothingPage'
 
 function App() {
     return (
@@ -10,6 +11,7 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/basics" element={<BasicsPage />} />
                 <Route path="/simplification" element={<SimplificationPage />} />
+                <Route path="/smoothing" element={<SmoothingPage />} />
             </Routes>
         </BrowserRouter>
     )

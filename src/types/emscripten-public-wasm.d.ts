@@ -45,3 +45,18 @@ declare module "@wasm/meshlib_simplification.js" {
   const createModule: any;
   export default createModule;
 }
+
+declare module "*.meshlib_smoothing.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "../wasm/meshlib_smoothing.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "@wasm/meshlib_smoothing.js" {
+  const createModule: any;
+  export default createModule;
+}

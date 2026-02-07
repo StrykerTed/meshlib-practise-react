@@ -1,36 +1,58 @@
 /**
- * Promise-based client that wraps the simplification Web Worker.
+ * Promise-based client that wraps the smoothing Web Worker.
  *
- * Follows the same pattern as FillHolesClient / SelfIntersectionsClient.
+ * Follows the same pattern as FillHolesClient / SimplificationClient.
  */
 
-export interface SimplifyOptions {
-  /** 0.0 – 1.0 (e.g. 0.5 = keep 50% of faces). Passed as target_ratio to WASM. */
-  targetRatio: number;
-  /** Whether to preserve mesh border edges. Defaults to false. */
-  preserveBorders?: boolean;
+export type SmoothingMethod =
+  | "laplacian"
+  | "taubin"
+  | "laplacianHC"
+  | "tangentialRelaxation";
+
+/** Map human-readable method names to the integer expected by the WASM API */
+const METHOD_INDEX: Record<SmoothingMethod, number> = {
+  laplacian: 0,
+  taubin: 1,
+  laplacianHC: 2,
+  tangentialRelaxation: 3,
+};
+
+export interface SmoothOptions {
+  /** Which smoothing algorithm to use. */
+  method: SmoothingMethod;
+  /** Number of smoothing iterations (≥ 1). */
+  iterations: number;
+  /** Taubin: inward diffusion [0,1]. Default 0.5. */
+  lambda?: number;
+  /** Taubin: outward diffusion (must be > lambda) [0,1]. Default 0.53. */
+  mu?: number;
+  /** LaplacianHC: smoothing strength [0,1]. Default 0.0. */
+  alpha?: number;
+  /** LaplacianHC: correction strength [0,1]. Default 0.5. */
+  beta?: number;
   /** Abort after this many ms. 0 = no timeout. */
   timeoutMs?: number;
   /** Called with human-readable status updates from the worker. */
   onStatus?: (stage: string) => void;
 }
 
-export interface SimplifyResult {
-  /** Simplified STL binary */
+export interface SmoothResult {
+  /** Smoothed STL binary */
   output: ArrayBuffer;
-  /** Number of faces in the input mesh */
-  inputFaces: number;
-  /** Number of faces after simplification */
-  outputFaces: number;
+  /** Face count (unchanged by smoothing) */
+  faces: number;
+  /** Vertex count */
+  vertices: number;
 }
 
-export class SimplificationClient {
+export class SmoothingClient {
   private worker: Worker | null = null;
   private nextId = 1;
   private pending = new Map<
     number,
     {
-      resolve: (v: SimplifyResult) => void;
+      resolve: (v: SmoothResult) => void;
       reject: (e: Error) => void;
       onStatus?: (s: string) => void;
       timer?: ReturnType<typeof setTimeout>;
@@ -41,7 +63,7 @@ export class SimplificationClient {
 
   private createWorker(): Worker {
     const w = new Worker(
-      new URL("../workers/simplification.worker.ts", import.meta.url),
+      new URL("../workers/smoothing.worker.ts", import.meta.url),
       { type: "module" },
     );
     w.addEventListener("message", this.handleMessage);
@@ -92,33 +114,37 @@ export class SimplificationClient {
 
   /* ---- main entry point ---- */
 
-  async simplify(
-    input: ArrayBuffer,
-    opts: SimplifyOptions,
-  ): Promise<SimplifyResult> {
+  async smooth(input: ArrayBuffer, opts: SmoothOptions): Promise<SmoothResult> {
     const w = this.ensureWorker();
     const id = this.nextId++;
 
-    return new Promise<SimplifyResult>((resolve, reject) => {
+    return new Promise<SmoothResult>((resolve, reject) => {
       let timer: ReturnType<typeof setTimeout> | undefined;
       const timeoutMs = opts.timeoutMs ?? 0;
       if (timeoutMs > 0) {
         timer = setTimeout(() => {
           this.pending.delete(id);
-          reject(new Error(`Simplification timed out after ${timeoutMs}ms`));
+          reject(new Error(`Smoothing timed out after ${timeoutMs}ms`));
         }, timeoutMs);
       }
 
-      this.pending.set(id, { resolve, reject, onStatus: opts.onStatus, timer });
+      this.pending.set(id, {
+        resolve,
+        reject,
+        onStatus: opts.onStatus,
+        timer,
+      });
 
-      // target_faces = 0 means "use ratio" on the WASM side
       w.postMessage(
         {
           id,
           input,
-          targetFaces: 0,
-          targetRatio: opts.targetRatio,
-          preserveBorders: opts.preserveBorders ?? false,
+          method: METHOD_INDEX[opts.method],
+          iterations: opts.iterations,
+          lambda: opts.lambda ?? 0.5,
+          mu: opts.mu ?? 0.53,
+          alpha: opts.alpha ?? 0.0,
+          beta: opts.beta ?? 0.5,
         },
         [input],
       );
@@ -148,11 +174,11 @@ export class SimplificationClient {
     if (d.ok) {
       p.resolve({
         output: d.output as ArrayBuffer,
-        inputFaces: d.inputFaces as number,
-        outputFaces: d.outputFaces as number,
+        faces: d.faces as number,
+        vertices: d.vertices as number,
       });
     } else {
-      p.reject(new Error(`Simplification failed (rc=${d.rc}): ${d.error}`));
+      p.reject(new Error(`Smoothing failed (rc=${d.rc}): ${d.error}`));
     }
   };
 }

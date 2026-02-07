@@ -202,13 +202,25 @@ body {
 /* ---- WASM processing spinner ---- */
 
 @keyframes spin-ring {
-    0%   { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 @keyframes pulse-glow {
-    0%, 100% { opacity: 0.6; }
-    50%      { opacity: 1; }
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
 }
 
 .wasm-spinner-overlay {
