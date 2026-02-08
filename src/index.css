@@ -122,7 +122,6 @@ body {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-fill-color: transparent;
 }
 
 .hello-button:hover .hello-button__text {
@@ -130,7 +129,6 @@ body {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-fill-color: transparent;
 }
 
 /* ---- Route cards (HomePage) ---- */
@@ -167,7 +165,6 @@ body {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-fill-color: transparent;
 }
 
 .route-card:hover .route-card__title {
@@ -175,7 +172,6 @@ body {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-fill-color: transparent;
 }
 
 .route-card__desc {
