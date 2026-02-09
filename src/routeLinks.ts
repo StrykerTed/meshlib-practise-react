@@ -29,4 +29,10 @@ export const routeLinks: RouteLink[] = [
     description:
       "Define patches, landmarks, and contours on a mesh surface using barycentric coordinates that survive deformations.",
   },
+  {
+    title: "Mesh Checks",
+    path: "/mesh-checks",
+    description:
+      "Run diagnostic checks on STL meshes to verify geometry integrity.",
+  },
 ];
