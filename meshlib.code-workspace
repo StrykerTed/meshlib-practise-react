@@ -1,19 +1,22 @@
 {
-	"folders": [
-		{
-			"path": "../meshlib"
-		},
-		{
-			"path": "."
-		},
-		{
-			"path": "../SykloneAll/Frontend/pkg-syklone-js"
-		},
-		{
-			"path": "../SykloneAll/Frontend/web-platform-creator"
-		}
-	],
-	"settings": {
-		"liveServer.settings.multiRootWorkspaceName": "meshlib"
-	}
+  "folders": [
+    {
+      "path": "../meshlib",
+    },
+    {
+      "path": ".",
+    },
+    {
+      "path": "../SykloneAll/Frontend/pkg-syklone-js",
+    },
+    {
+      "path": "../SykloneAll/Frontend/web-platform-creator",
+    },
+    {
+      "path": "../meshlib-python-testing",
+    },
+  ],
+  "settings": {
+    "liveServer.settings.multiRootWorkspaceName": "meshlib",
+  },
 }
