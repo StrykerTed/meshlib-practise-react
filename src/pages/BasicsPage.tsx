@@ -26,6 +26,7 @@ function BasicsPage() {
     const [repairedStl, setRepairedStl] = useState<ArrayBuffer | null>(null)
     const [status, setStatus] = useState<string>('')
     const [error, setError] = useState<string>('')
+    const [holesFilledCount, setHolesFilledCount] = useState<number | null>(null)
 
     const [isDetecting, setIsDetecting] = useState(false)
     const [isRepairing, setIsRepairing] = useState(false)
@@ -52,6 +53,7 @@ function BasicsPage() {
         setRepairedStl(null)
         setStatus('')
         setError('')
+        setHolesFilledCount(null)
         setIntersectionCount(null)
         setIntersectionSegments(null)
     }, [selectedFile])
@@ -70,12 +72,14 @@ function BasicsPage() {
             const input = await res.arrayBuffer()
             setStatus('Running FillHoles (WASM in worker)…')
             const startMs = performance.now()
-            const output = await fillHolesClient.fillHoles(input, {
+            const result = await fillHolesClient.fillHoles(input, {
                 onStatus: (stage) => setStatus(stage),
             })
             const elapsedMs = performance.now() - startMs
-            setRepairedStl(output)
-            setStatus(`Done in ${elapsedMs.toFixed(0)} ms`)
+            console.log('[BasicsPage] FillHoles result:', result);
+            setRepairedStl(result.output)
+            setHolesFilledCount(result.holesFilledCount ?? null)
+            setStatus(`Done in ${elapsedMs.toFixed(0)} ms${result.holesFilledCount !== undefined ? ` - ${result.holesFilledCount} holes filled` : ''}`)
         } catch (e: any) {
             console.error('[FillHoles] failed:', e)
             setError(String(e?.message || e))

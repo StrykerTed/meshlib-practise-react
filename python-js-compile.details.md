@@ -46,13 +46,13 @@ self_intersections_api.cpp  →  Emscripten  →  .wasm + .js   →  Browser (JS
 
 ### Side-by-Side Comparison
 
-|                        | Browser (JS)                                    | Server (Python)                                        |
-| ---------------------- | ----------------------------------------------- | ------------------------------------------------------ |
-| **Binary**             | `meshlib_self_intersections.wasm`               | `libmeshlib_self_intersections.dylib` (`.so` on Linux) |
-| **Loader**             | Emscripten JS glue (`.js`)                      | Python `ctypes.CDLL()`                                 |
-| **Same C++ source?**   | ✅ `self_intersections_api.cpp`                 | ✅ same file                                           |
-| **Same exported fns?** | ✅ `meshlib_detect_self_intersections_stl` etc. | ✅ identical symbols                                   |
-| **Compiler**           | Emscripten → WASM bytecode                      | GCC → native ARM64 machine code                        |
+|                        | Browser (JS)                                                 | Server (Python)                                                                        |
+| ---------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| **Binaries**           | `meshlib_self_intersections.wasm`, `meshlib_fill_holes.wasm` | `libmeshlib_self_intersections.dylib` + `libmeshlib_fill_holes.dylib` (`.so` on Linux) |
+| **Loader**             | Emscripten JS glue (`.js`)                                   | Python `ctypes.CDLL()`                                                                 |
+| **Same C++ source?**   | ✅ `self_intersections_api.cpp`, `fill_holes_api.cpp`        | ✅ same files                                                                          |
+| **Same exported fns?** | ✅ `meshlib_detect_self_intersections_stl` etc.              | ✅ identical symbols                                                                   |
+| **Compiler**           | Emscripten → WASM bytecode                                   | GCC `-O3` → native ARM64 machine code                                                  |
 
 ---
 
@@ -63,19 +63,21 @@ self_intersections_api.cpp  →  Emscripten  →  .wasm + .js   →  Browser (JS
 | File                                           | Change                                                                                                                                                                            |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `web/native_self_intersections/CMakeLists.txt` | **New.** Builds `self_intersections_api.cpp` as a `SHARED` library. Outputs `libmeshlib_self_intersections.dylib` (macOS) or `.so` (Linux) into `web/native_self_intersections/`. |
-| `CMakeLists.txt` (root, line ~41)              | Added option `MESHLIB_BUILD_NATIVE_PYTHON_LIBS` (default `OFF`). When `ON` and not Emscripten, runs `add_subdirectory(web/native_self_intersections)`.                            |
+| `web/native_fill_holes/CMakeLists.txt`         | **New.** Builds `fill_holes_api.cpp` as a `SHARED` library. Outputs `libmeshlib_fill_holes.dylib` / `.so`. Adds `-Wno-sign-compare` for a GCC warning in the raw-mesh helper.     |
+| `CMakeLists.txt` (root, line ~41)              | Added option `MESHLIB_BUILD_NATIVE_PYTHON_LIBS` (default `OFF`). When `ON` and not Emscripten, runs `add_subdirectory` for both native targets.                                   |
 
 The existing WASM build (`web/wasm_self_intersections/`) is **completely untouched**.
 
 ### `meshlib-python-testing` repo (Python side)
 
-| File                               | Change                                                                                                                                 |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `app/wasm/` (entire directory)     | **Deleted.** Removed the `wasmtime` loader, `.wasm` binary, and all WASI code.                                                         |
-| `app/native/self_intersections.py` | **New.** `ctypes` wrapper class `SelfIntersections` with `.detect()` and `.repair()` methods matching the C signatures exactly.        |
-| `app/main.py`                      | Rewritten. Loads the native lib at startup, exposes `POST /self-intersections/detect` and `POST /self-intersections/repair` endpoints. |
-| `requirements.txt`                 | Removed `wasmtime`, `pydantic`. Added `python-multipart` (for file uploads).                                                           |
-| `README.md`                        | Full rewrite with architecture diagram and build/run instructions.                                                                     |
+| File                               | Change                                                                                                                            |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `app/wasm/` (entire directory)     | **Deleted.** Removed the `wasmtime` loader, `.wasm` binary, and all WASI code.                                                    |
+| `app/native/self_intersections.py` | **New.** `ctypes` wrapper class `SelfIntersections` with `.detect()` and `.repair()` methods matching the C signatures exactly.   |
+| `app/native/fill_holes.py`         | **New.** `ctypes` wrapper class `FillHoles` with `.find_holes()` method. Wraps `meshlib_find_holes_stl` (detect-only, no repair). |
+| `app/main.py`                      | Rewritten (v0.3.0). Loads both native libs at startup, exposes SI + holes + mesh-report endpoints.                                |
+| `requirements.txt`                 | Removed `wasmtime`, `pydantic`. Added `python-multipart` (for file uploads).                                                      |
+| `README.md`                        | Full rewrite with architecture diagram and build/run instructions.                                                                |
 
 ---
 
@@ -140,6 +142,7 @@ rm -rf build-native   # always start clean when changing compilers
 
 # Adjust gcc-15 / g++-15 to match: ls /opt/homebrew/bin/g++-*
 MESHLIB_LOCAL_BUILD_ENV=1 build_env=local cmake -B build-native \
+    -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=gcc-15 \
     -DCMAKE_CXX_COMPILER=g++-15 \
     -DMESHLIB_BUILD_NATIVE_PYTHON_LIBS=ON \
@@ -148,10 +151,24 @@ MESHLIB_LOCAL_BUILD_ENV=1 build_env=local cmake -B build-native \
     -DMESHLIB_BUILD_WITH_OPEN_MP=OFF \
     -DMESHLIB_GEOMETRY_AS_SUBMODULE=ON
 
-cmake --build build-native --target meshlib_self_intersections_native
+cmake --build build-native --target meshlib_self_intersections_native meshlib_fill_holes_native
 ```
 
-This produces `web/native_self_intersections/libmeshlib_self_intersections.dylib` (2.5 MB).
+This produces:
+
+- `web/native_self_intersections/libmeshlib_self_intersections.dylib` (~1.4 MB)
+- `web/native_fill_holes/libmeshlib_fill_holes.dylib` (~1.2 MB)
+
+For Linux `.so` files (needed for Docker / Azure), use the Docker build script:
+
+```bash
+cd meshlib-python-testing
+bash scripts/build_native_lib.sh
+# → app/native/libmeshlib_self_intersections.so (~1.3 MB)
+# → app/native/libmeshlib_fill_holes.so (~1.1 MB)
+```
+
+> ⚠️ **`-DCMAKE_BUILD_TYPE=Release` is critical!** Without it CMake defaults to no optimisation flags — the library runs **~11× slower** (11.5s vs 1.0s for a 5.6 MB STL). Release mode enables `-O3 -DNDEBUG`.
 
 > **Note:** The first build compiles geometry + mesh_core + mesh_extended from source (~2 min). Subsequent builds are incremental and fast.
 
@@ -178,24 +195,25 @@ The Python service auto-discovers the `.dylib`/`.so` at `../meshlib/web/native_s
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `MESHLIB_LOCAL_BUILD_ENV=1`             | Env var that enables local-dev mode in **meshlib**, bypassing the CI-only `CI_COMMIT_SHA` requirement                  |
 | `build_env=local`                       | Env var that enables local-dev mode in the **geometry** submodule (has its own separate `CI_COMMIT_SHA` check)         |
+| `-DCMAKE_BUILD_TYPE=Release`            | **Critical.** Enables `-O3` optimisation. Without it the build is ~11× slower                                          |
 | `-DCMAKE_C_COMPILER=gcc-15`             | Use Homebrew's real GCC (passes the geometry compiler allowlist). Adjust version to match `ls /opt/homebrew/bin/g++-*` |
 | `-DMESHLIB_GEOMETRY_AS_SUBMODULE=ON`    | Build geometry from the submodule rather than looking for a pre-installed package                                      |
 | `-DMESHLIB_BUILD_TESTS=OFF`             | Skip test targets (faster, avoids needing CppUnit)                                                                     |
 | `-DMESHLIB_BUILD_APP_TARGETS=OFF`       | Skip the CLI app targets (mesh_compare, mesh_converter, etc.)                                                          |
 | `-DMESHLIB_BUILD_WITH_OPEN_MP=OFF`      | Avoid needing a GCC-compatible OpenMP runtime on macOS                                                                 |
-| `-DMESHLIB_BUILD_NATIVE_PYTHON_LIBS=ON` | Enables our new native shared-library target                                                                           |
+| `-DMESHLIB_BUILD_NATIVE_PYTHON_LIBS=ON` | Enables our new native shared-library targets (self-intersections + fill-holes)                                        |
 
 ---
 
 ## Why Native Over WASM-in-Python
 
-|                        | Native (`ctypes`)        | WASM-in-Python (`wasmtime`)                   |
-| ---------------------- | ------------------------ | --------------------------------------------- |
-| **Speed**              | ~2-5× faster             | Interpreted overhead                          |
-| **Debugging**          | GDB / LLDB just work     | Opaque WASM runtime                           |
-| **Impedance mismatch** | None — plain C ABI       | Must stub Emscripten imports                  |
-| **Dependencies**       | Zero (just the `.dylib`) | `wasmtime` + compatible WASM build            |
-| **Portability**        | Mac + Linux (server)     | Theoretical only — browser WASM ≠ server WASM |
+|                        | Native (`ctypes`)                                 | WASM-in-Python (`wasmtime`)                   |
+| ---------------------- | ------------------------------------------------- | --------------------------------------------- |
+| **Speed**              | ~5× faster than WASM (1.0s vs 5.3s on 5.6 MB STL) | Interpreted overhead                          |
+| **Debugging**          | GDB / LLDB just work                              | Opaque WASM runtime                           |
+| **Impedance mismatch** | None — plain C ABI                                | Must stub Emscripten imports                  |
+| **Dependencies**       | Zero (just the `.dylib`)                          | `wasmtime` + compatible WASM build            |
+| **Portability**        | Mac + Linux (server)                              | Theoretical only — browser WASM ≠ server WASM |
 
 The only scenario where WASM-in-Python makes sense is if you literally **cannot compile natively** on the target platform. Since MeshLib already has CMake and builds on Mac/Linux, native is the clear winner.
 
@@ -260,16 +278,22 @@ meshlib/
       meshlib_self_intersections.js
       meshlib_self_intersections.wasm
     native_self_intersections/            ← NEW
-      CMakeLists.txt                      ← clang/gcc → .dylib / .so
-      libmeshlib_self_intersections.dylib   (after build)
+      CMakeLists.txt                      ← gcc → .dylib / .so
+      libmeshlib_self_intersections.dylib   (after build, ~1.4 MB)
+    native_fill_holes/                    ← NEW
+      CMakeLists.txt                      ← gcc → .dylib / .so
+      libmeshlib_fill_holes.dylib           (after build, ~1.2 MB)
 
 meshlib-python-testing/
   app/
     native/
-      self_intersections.py               ← ctypes wrapper
-    main.py                               ← FastAPI endpoints
+      self_intersections.py               ← ctypes wrapper (SI detect + repair)
+      fill_holes.py                       ← ctypes wrapper (hole detection)
+    main.py                               ← FastAPI endpoints (v0.3.0)
     data/
       sample.stl
+      high_cube.stl
+      ... (9 test STL files)
   requirements.txt
   run.sh
   README.md

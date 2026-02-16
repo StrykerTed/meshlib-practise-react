@@ -33,7 +33,7 @@ type RequestMessage = { id: number; input: ArrayBuffer };
 type StatusMessage = { id: number; kind: "status"; stage: string };
 
 type ResponseMessage =
-  | { id: number; ok: true; output: ArrayBuffer }
+  | { id: number; ok: true; output: ArrayBuffer; holesFilledCount?: number }
   | { id: number; ok: false; rc: number; error: string };
 
 export {};
@@ -137,6 +137,12 @@ async function handleJobMessage(e: MessageEvent<RequestMessage>) {
       const outSize = Module.HEAPU32[outSizePtr >> 2];
       const errPtr = Module.HEAPU32[errPtrPtr >> 2];
 
+      console.log("[FillHoles Worker] WASM Response:");
+      console.log("  rc (return code):", rc);
+      console.log("  outPtr:", outPtr);
+      console.log("  outSize:", outSize);
+      console.log("  errPtr:", errPtr);
+
       if (rc !== 0) {
         const err = readCString(Module, errPtr);
         if (errPtr) Module._meshlib_free(errPtr);
@@ -148,12 +154,21 @@ async function handleJobMessage(e: MessageEvent<RequestMessage>) {
       const outBytes = Module.HEAPU8.slice(outPtr, outPtr + outSize);
       Module._meshlib_free(outPtr);
 
+      // The return code might contain the number of holes filled
+      const holesFilledCount = rc;
+      console.log("[FillHoles Worker] Holes filled count:", holesFilledCount);
+
       postStatus(
         id,
-        `FillHoles complete. Output bytes: ${outBytes.byteLength}`,
+        `FillHoles complete. Output bytes: ${outBytes.byteLength}, Holes filled: ${holesFilledCount}`,
       );
 
-      const msg: ResponseMessage = { id, ok: true, output: outBytes.buffer };
+      const msg: ResponseMessage = {
+        id,
+        ok: true,
+        output: outBytes.buffer,
+        holesFilledCount,
+      };
       (self as unknown as DedicatedWorkerGlobalScope).postMessage(msg, [
         outBytes.buffer,
       ]);

@@ -15,6 +15,15 @@
     {
       "path": "../meshlib-python-testing",
     },
+    {
+      "path": "../meshlib-docker-compiler",
+    },
+    {
+      "path": "../SykloneAll/prd-svc-case-manager",
+    },
+    {
+      "path": "../SykloneAll/Syklone/prd-svc-case-manager",
+    },
   ],
   "settings": {
     "liveServer.settings.multiRootWorkspaceName": "meshlib",

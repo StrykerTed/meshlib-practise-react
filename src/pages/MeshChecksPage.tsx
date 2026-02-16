@@ -142,7 +142,7 @@ function MeshChecksPage() {
             // fillHoles internally calls MeshLib C++ FindHoles() then fills.
             // By comparing triangle counts we know if holes were found.
             const startMs = performance.now()
-            const output = await client.fillHoles(inputBuf.slice(0), {
+            const { output, holesFilledCount } = await client.fillHoles(inputBuf.slice(0), {
                 onStatus: (s) =>
                     setHolesCheck((prev) => ({ ...prev, summary: s })),
             })
@@ -152,10 +152,11 @@ function MeshChecksPage() {
             if (inputTris !== null && outputTris !== null) {
                 const addedTris = outputTris - inputTris
                 if (addedTris > 0) {
+                    const holeNote = holesFilledCount != null ? `${holesFilledCount} hole(s) filled, ` : ''
                     setHolesCheck({
                         status: 'fail',
                         summary: `Holes detected`,
-                        detail: `MeshLib FindHoles found boundaries — ${addedTris} triangle(s) added to fill (${elapsedMs.toFixed(0)} ms)`,
+                        detail: `MeshLib FindHoles found boundaries — ${holeNote}${addedTris} triangle(s) added to fill (${elapsedMs.toFixed(0)} ms)`,
                     })
                 } else {
                     setHolesCheck({
