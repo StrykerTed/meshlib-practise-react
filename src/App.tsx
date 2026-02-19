@@ -5,6 +5,7 @@ import SimplificationPage from './pages/SimplificationPage'
 import SmoothingPage from './pages/SmoothingPage'
 import AnnotationsPage from './pages/AnnotationsPage'
 import MeshChecksPage from './pages/MeshChecksPage'
+import NoiseChecksPage from './pages/NoiseChecksPage'
 
 function App() {
     return (
@@ -16,6 +17,7 @@ function App() {
                 <Route path="/smoothing" element={<SmoothingPage />} />
                 <Route path="/annotations" element={<AnnotationsPage />} />
                 <Route path="/mesh-checks" element={<MeshChecksPage />} />
+                <Route path="/noise-checks" element={<NoiseChecksPage />} />
             </Routes>
         </BrowserRouter>
     )

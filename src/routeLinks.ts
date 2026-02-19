@@ -33,6 +33,12 @@ export const routeLinks: RouteLink[] = [
     title: "Mesh Checks",
     path: "/mesh-checks",
     description:
-      "Run diagnostic checks on STL meshes to verify geometry integrity.",
+      "Run diagnostic checks on STL meshes to verify geometry integrity.                                                                        ",
+  },
+  {
+    title: "Noise Checks",
+    path: "/noise-checks",
+    description:
+      "Noise shells are small, disconnected triangle clusters in an STL mesh with no valid enclosed volume.",
   },
 ];
