@@ -7,9 +7,10 @@ interface STLBufferViewerProps {
     color?: string
     doubleSided?: boolean
     autoScale?: boolean
+    groundAlign?: boolean
 }
 
-function processGeometry(geometry: THREE.BufferGeometry, autoScale: boolean): THREE.BufferGeometry {
+function processGeometry(geometry: THREE.BufferGeometry, autoScale: boolean, groundAlign: boolean): THREE.BufferGeometry {
     const geo = geometry.clone()
     geo.computeVertexNormals()
     geo.center()
@@ -26,22 +27,24 @@ function processGeometry(geometry: THREE.BufferGeometry, autoScale: boolean): TH
             geo.scale(scale, scale, scale)
         }
 
-        geo.computeBoundingBox()
-        const bbox2 = geo.boundingBox
-        if (bbox2) {
-            geo.translate(0, 0, -bbox2.min.z)
+        if (groundAlign) {
+            geo.computeBoundingBox()
+            const bbox2 = geo.boundingBox
+            if (bbox2) {
+                geo.translate(0, 0, -bbox2.min.z)
+            }
         }
     }
 
     return geo
 }
 
-function STLBufferViewer({ data, color = '#22c55e', doubleSided = false, autoScale = true }: STLBufferViewerProps) {
+function STLBufferViewer({ data, color = '#22c55e', doubleSided = false, autoScale = true, groundAlign = true }: STLBufferViewerProps) {
     const geometry = useMemo(() => {
         const loader = new STLLoader()
         const parsed = loader.parse(data) as THREE.BufferGeometry
-        return processGeometry(parsed, autoScale)
-    }, [data, autoScale])
+        return processGeometry(parsed, autoScale, groundAlign)
+    }, [data, autoScale, groundAlign])
 
     return (
         <mesh geometry={geometry} castShadow receiveShadow>

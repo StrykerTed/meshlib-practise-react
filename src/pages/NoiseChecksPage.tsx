@@ -12,6 +12,7 @@ import { CanvasContainer } from '../styles/CanvasContainer'
 
 const STL_FILES = [
     'test_noise.stl',
+    'goat_statue_scan.stl',
 ]
 
 function NoiseChecksPage() {
@@ -164,7 +165,7 @@ function NoiseChecksPage() {
                                     </Text>
                                 </Billboard>
                             )}
-                            <STLViewer filename={selectedFile} doubleSided autoScale={false} />
+                            <STLViewer filename={selectedFile} doubleSided autoScale={false} groundAlign={true} />
                         </group>
                     )}
                     {repairedStl && (
@@ -181,7 +182,7 @@ function NoiseChecksPage() {
                                     Repaired
                                 </Text>
                             </Billboard>
-                            <STLBufferViewer data={repairedStl} doubleSided autoScale={false} />
+                            <STLBufferViewer data={repairedStl} doubleSided autoScale={false} groundAlign={true} />
                         </group>
                     )}
                 </Canvas>

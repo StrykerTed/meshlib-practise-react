@@ -7,9 +7,10 @@ interface STLViewerProps {
     filename: string
     doubleSided?: boolean
     autoScale?: boolean
+    groundAlign?: boolean
 }
 
-function STLViewer({ filename, doubleSided = false, autoScale = true }: STLViewerProps) {
+function STLViewer({ filename, doubleSided = false, autoScale = true, groundAlign = true }: STLViewerProps) {
     const geometry = useLoader(STLLoader, `/stl/${filename}`)
 
     // Center and scale the geometry
@@ -32,17 +33,19 @@ function STLViewer({ filename, doubleSided = false, autoScale = true }: STLViewe
                 geo.scale(scale, scale, scale)
             }
 
-            // After scaling, recompute bounds and move the model up so it sits on Z=0.
-            // (Keep X/Y centered from geo.center(), but ensure it doesn't go below the floor.)
-            geo.computeBoundingBox()
-            const bbox2 = geo.boundingBox
-            if (bbox2) {
-                geo.translate(0, 0, -bbox2.min.z)
+            if (groundAlign) {
+                // After scaling, recompute bounds and move the model up so it sits on Z=0.
+                // (Keep X/Y centered from geo.center(), but ensure it doesn't go below the floor.)
+                geo.computeBoundingBox()
+                const bbox2 = geo.boundingBox
+                if (bbox2) {
+                    geo.translate(0, 0, -bbox2.min.z)
+                }
             }
         }
 
         return geo
-    }, [geometry, autoScale])
+    }, [geometry, autoScale, groundAlign])
 
     return (
         <mesh geometry={processedGeometry} castShadow receiveShadow>
