@@ -137,9 +137,7 @@ export class NoiseShellsClient {
 
       const t = setTimeout(() => {
         cleanup();
-        reject(
-          new Error("NoiseShells worker did not become ready (timeout)"),
-        );
+        reject(new Error("NoiseShells worker did not become ready (timeout)"));
       }, 15_000);
     });
   }

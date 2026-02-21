@@ -38,23 +38,23 @@ The MeshLib C++ library already contains all the detection and repair APIs neede
 
 ### Detection APIs
 
-| API | Description |
-|---|---|
-| `MeshRepair_C::DetectComponents(mesh)` | Returns `ComponentsInfo_C` with per-component details |
-| `ComponentsInfo_C::GetNumberOfComponents()` | Total count of disconnected shells |
-| `ComponentsInfo_C::GetArea(index)` | Surface area of component at sorted index |
-| `ComponentsInfo_C::GetNumberOfFaces(index)` | Face count of component |
-| `ComponentsInfo_C::GetNumberOfVertices(index)` | Vertex count of component |
-| `ComponentsInfo_C::GetInfoList()` | Sorted list (descending by size) — index 0 = main body |
+| API                                            | Description                                            |
+| ---------------------------------------------- | ------------------------------------------------------ |
+| `MeshRepair_C::DetectComponents(mesh)`         | Returns `ComponentsInfo_C` with per-component details  |
+| `ComponentsInfo_C::GetNumberOfComponents()`    | Total count of disconnected shells                     |
+| `ComponentsInfo_C::GetArea(index)`             | Surface area of component at sorted index              |
+| `ComponentsInfo_C::GetNumberOfFaces(index)`    | Face count of component                                |
+| `ComponentsInfo_C::GetNumberOfVertices(index)` | Vertex count of component                              |
+| `ComponentsInfo_C::GetInfoList()`              | Sorted list (descending by size) — index 0 = main body |
 
 Internally, `DetectComponents()` calls `ConnectedComponents_C::FindConnectedComponents()` with vertex connectivity and area computation enabled.
 
 ### Repair APIs
 
-| API | Description |
-|---|---|
-| `MeshRepair_C::RepairMesh(mesh, config)` | Full repair pipeline; enable only `fix_small_components` |
-| `MeshComponentsConfig_C::is_enabled` | Toggle small-component removal on/off |
+| API                                                      | Description                                                                              |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `MeshRepair_C::RepairMesh(mesh, config)`                 | Full repair pipeline; enable only `fix_small_components`                                 |
+| `MeshComponentsConfig_C::is_enabled`                     | Toggle small-component removal on/off                                                    |
 | `MeshComponentsConfig_C::component_area_ratio_threshold` | 0.0–1.0; components below this ratio of the largest are removed. 1.0 = keep only largest |
 
 ### Key Headers
@@ -76,29 +76,29 @@ Two extern "C" functions:
 
 #### `meshlib_detect_noise_shells_stl` (Priority 1 — Detect)
 
-| Parameter | Type | Description |
-|---|---|---|
-| `stl_data` | `const uint8_t*` | Input binary STL buffer |
-| `stl_size` | `size_t` | Byte length |
-| `out_total_components` | `uint32_t*` | Total number of connected components |
-| `out_noise_count` | `uint32_t*` | Components other than the largest (noise candidates) |
-| `out_components_data` | `uint8_t**` | malloc'd float32 buffer: 3 values per component `[area, face_count, vertex_count, ...]` sorted descending by size |
-| `out_components_size` | `size_t*` | Byte length of components buffer |
-| `out_error` | `char**` | malloc'd error string on failure |
-| **Returns** | `int` | 0 = success, 1 = error, 2 = bad params |
+| Parameter              | Type             | Description                                                                                                       |
+| ---------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `stl_data`             | `const uint8_t*` | Input binary STL buffer                                                                                           |
+| `stl_size`             | `size_t`         | Byte length                                                                                                       |
+| `out_total_components` | `uint32_t*`      | Total number of connected components                                                                              |
+| `out_noise_count`      | `uint32_t*`      | Components other than the largest (noise candidates)                                                              |
+| `out_components_data`  | `uint8_t**`      | malloc'd float32 buffer: 3 values per component `[area, face_count, vertex_count, ...]` sorted descending by size |
+| `out_components_size`  | `size_t*`        | Byte length of components buffer                                                                                  |
+| `out_error`            | `char**`         | malloc'd error string on failure                                                                                  |
+| **Returns**            | `int`            | 0 = success, 1 = error, 2 = bad params                                                                            |
 
 #### `meshlib_remove_noise_shells_stl` (Priority 2 — Repair)
 
-| Parameter | Type | Description |
-|---|---|---|
-| `stl_data` | `const uint8_t*` | Input binary STL buffer |
-| `stl_size` | `size_t` | Byte length |
-| `area_ratio_threshold` | `float` | Components below this ratio of the largest are removed (1.0 = keep only largest) |
-| `out_data` | `uint8_t**` | malloc'd repaired STL buffer |
-| `out_size` | `size_t*` | Byte length of repaired STL |
-| `out_removed_components` | `uint32_t*` | Number of removed components |
-| `out_error` | `char**` | malloc'd error string on failure |
-| **Returns** | `int` | 0 = success, 1 = error, 2 = bad params |
+| Parameter                | Type             | Description                                                                      |
+| ------------------------ | ---------------- | -------------------------------------------------------------------------------- |
+| `stl_data`               | `const uint8_t*` | Input binary STL buffer                                                          |
+| `stl_size`               | `size_t`         | Byte length                                                                      |
+| `area_ratio_threshold`   | `float`          | Components below this ratio of the largest are removed (1.0 = keep only largest) |
+| `out_data`               | `uint8_t**`      | malloc'd repaired STL buffer                                                     |
+| `out_size`               | `size_t*`        | Byte length of repaired STL                                                      |
+| `out_removed_components` | `uint32_t*`      | Number of removed components                                                     |
+| `out_error`              | `char**`         | malloc'd error string on failure                                                 |
+| **Returns**              | `int`            | 0 = success, 1 = error, 2 = bad params                                           |
 
 #### `meshlib_free`
 
@@ -106,14 +106,15 @@ Standard memory deallocation for malloc'd output buffers.
 
 ### 3.2 Build Targets
 
-| Target | Location | Output |
-|---|---|---|
-| **WASM** | `meshlib/web/wasm_noise_shells/CMakeLists.txt` | `meshlib_noise_shells.js` + `meshlib_noise_shells.wasm` |
-| **Native .so** | `meshlib/web/native_noise_shells/CMakeLists.txt` | `libmeshlib_noise_shells.so` / `.dylib` |
+| Target         | Location                                         | Output                                                  |
+| -------------- | ------------------------------------------------ | ------------------------------------------------------- |
+| **WASM**       | `meshlib/web/wasm_noise_shells/CMakeLists.txt`   | `meshlib_noise_shells.js` + `meshlib_noise_shells.wasm` |
+| **Native .so** | `meshlib/web/native_noise_shells/CMakeLists.txt` | `libmeshlib_noise_shells.so` / `.dylib`                 |
 
 Both link against `${MESHLIB_EXTENDED}` and `${MESHLIB_CORE}` — same dependencies as existing modules.
 
 **Root CMakeLists.txt** updated:
+
 - Added `option(MESHLIB_BUILD_NATIVE_PYTHON_LIBS ...)`
 - Added `add_subdirectory(web/wasm_noise_shells)` in WASM section
 - Added `add_subdirectory(web/native_noise_shells)` in native Python section
@@ -123,6 +124,7 @@ Both link against `${MESHLIB_EXTENDED}` and `${MESHLIB_CORE}` — same dependenc
 **Location:** `meshlib-python-testing/app/native/noise_shells.py`
 
 Classes:
+
 - `ComponentInfo` — dataclass with `index`, `area`, `face_count`, `vertex_count`, `is_main_body`
 - `DetectResult` — dataclass with `total_components`, `noise_count`, `components` list
 - `RemoveResult` — dataclass with `removed_components`, `stl_bytes`
@@ -160,12 +162,12 @@ cmake --build build-native --target meshlib_noise_shells_native
 
 ## 4. Threshold Considerations
 
-| Threshold | Behaviour | Use Case |
-|---|---|---|
-| `1.0` | Keep only the single largest component | Aggressive — removes everything except main body |
-| `0.1` | Keep components ≥ 10% of largest area | Moderate |
-| `0.01` | Keep components ≥ 1% of largest area | Conservative (closer to Magics behaviour) |
-| `0.0` | No removal (no-op) | Detection only |
+| Threshold | Behaviour                              | Use Case                                         |
+| --------- | -------------------------------------- | ------------------------------------------------ |
+| `1.0`     | Keep only the single largest component | Aggressive — removes everything except main body |
+| `0.1`     | Keep components ≥ 10% of largest area  | Moderate                                         |
+| `0.01`    | Keep components ≥ 1% of largest area   | Conservative (closer to Magics behaviour)        |
+| `0.0`     | No removal (no-op)                     | Detection only                                   |
 
 **Recommendation:** Use `1.0` as the default for automated pipelines (simple, predictable), but expose the threshold to the UI so users can tune it. The **detect** function always returns all components regardless of threshold, allowing the UI to present the full picture.
 
@@ -175,12 +177,12 @@ cmake --build build-native --target meshlib_noise_shells_native
 
 The following items are needed to complete the browser-side integration in `meshlib-react-fe`:
 
-| Item | Pattern to Follow | Status |
-|---|---|---|
-| `src/workers/noiseShells.worker.ts` | `selfIntersections.worker.ts` | Not started |
-| `src/lib/noiseShellsClient.ts` | `selfIntersectionsClient.ts` | Not started |
-| WASM files in `src/wasm/` | Copy built `meshlib_noise_shells.js` + `.wasm` | Requires WASM build |
-| `MeshChecksPage.tsx` integration | Add noise shells check alongside existing checks | Not started |
+| Item                                | Pattern to Follow                                | Status              |
+| ----------------------------------- | ------------------------------------------------ | ------------------- |
+| `src/workers/noiseShells.worker.ts` | `selfIntersections.worker.ts`                    | Not started         |
+| `src/lib/noiseShellsClient.ts`      | `selfIntersectionsClient.ts`                     | Not started         |
+| WASM files in `src/wasm/`           | Copy built `meshlib_noise_shells.js` + `.wasm`   | Requires WASM build |
+| `MeshChecksPage.tsx` integration    | Add noise shells check alongside existing checks | Not started         |
 
 These follow the established worker + client pattern (Style A) and can be implemented once the WASM build produces the `.js` and `.wasm` artifacts.
 
@@ -188,10 +190,10 @@ These follow the established worker + client pattern (Style A) and can be implem
 
 ## 6. Files Created/Modified
 
-| File | Repo | Action |
-|---|---|---|
-| `web/wasm_noise_shells/noise_shells_api.cpp` | meshlib | Created — C API for detect + remove |
-| `web/wasm_noise_shells/CMakeLists.txt` | meshlib | Created — WASM build target |
-| `web/native_noise_shells/CMakeLists.txt` | meshlib | Created — Native .so build target |
-| `CMakeLists.txt` (root) | meshlib | Modified — added option, WASM + native subdirectories |
-| `app/native/noise_shells.py` | meshlib-python-testing | Created — Python ctypes wrapper |
+| File                                         | Repo                   | Action                                                |
+| -------------------------------------------- | ---------------------- | ----------------------------------------------------- |
+| `web/wasm_noise_shells/noise_shells_api.cpp` | meshlib                | Created — C API for detect + remove                   |
+| `web/wasm_noise_shells/CMakeLists.txt`       | meshlib                | Created — WASM build target                           |
+| `web/native_noise_shells/CMakeLists.txt`     | meshlib                | Created — Native .so build target                     |
+| `CMakeLists.txt` (root)                      | meshlib                | Modified — added option, WASM + native subdirectories |
+| `app/native/noise_shells.py`                 | meshlib-python-testing | Created — Python ctypes wrapper                       |

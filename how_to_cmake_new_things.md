@@ -9,9 +9,9 @@ Kept here so we can update it freely without touching the meshlib repo README.
 
 Each mesh tool (e.g. `fill_holes`, `self_intersections`, `noise_shells`) has **one** shared C++ source file and **two** CMake targets:
 
-| Target | Compiler | Output | Used by |
-| --- | --- | --- | --- |
-| `meshlib_<name>_wasm` | Emscripten (`emcc`) | `.js` + `.wasm` | Browser (this React app) |
+| Target                  | Compiler                                           | Output            | Used by                   |
+| ----------------------- | -------------------------------------------------- | ----------------- | ------------------------- |
+| `meshlib_<name>_wasm`   | Emscripten (`emcc`)                                | `.js` + `.wasm`   | Browser (this React app)  |
 | `meshlib_<name>_native` | GCC (`g++-15` on macOS, `gcc:14` Docker for Linux) | `.dylib` or `.so` | Python service (`ctypes`) |
 
 The C++ source lives in `meshlib/web/wasm_<name>/<name>_api.cpp` and is referenced by both CMake targets — no code duplication.
@@ -30,14 +30,14 @@ meshlib/
 
 ### Current tools
 
-| Name | WASM target | Native target |
-| --- | --- | --- |
-| Fill Holes | `meshlib_fill_holes_wasm` | `meshlib_fill_holes_native` |
+| Name               | WASM target                       | Native target                       |
+| ------------------ | --------------------------------- | ----------------------------------- |
+| Fill Holes         | `meshlib_fill_holes_wasm`         | `meshlib_fill_holes_native`         |
 | Self Intersections | `meshlib_self_intersections_wasm` | `meshlib_self_intersections_native` |
-| Noise Shells | `meshlib_noise_shells_wasm` | `meshlib_noise_shells_native` |
-| Simplification | `meshlib_simplification_wasm` | — |
-| Smoothing | `meshlib_smoothing_wasm` | — |
-| Annotations | `meshlib_annotations_wasm` | — |
+| Noise Shells       | `meshlib_noise_shells_wasm`       | `meshlib_noise_shells_native`       |
+| Simplification     | `meshlib_simplification_wasm`     | —                                   |
+| Smoothing          | `meshlib_smoothing_wasm`          | —                                   |
+| Annotations        | `meshlib_annotations_wasm`        | —                                   |
 
 ---
 
@@ -74,14 +74,14 @@ emcmake cmake -S . -B build-wasm-fillholes \
 
 **Why each flag matters:**
 
-| Flag | Reason |
-| --- | --- |
-| `build_env=local` + `MESHLIB_LOCAL_BUILD_ENV=1` | Bypass CI_COMMIT_SHA requirement |
-| `MESHLIB_GEOMETRY_AS_SUBMODULE=ON` | Use the git submodule, no Artifactory credentials needed |
-| `MESHLIB_BUILD_WASM_DEMO=ON` | Enables the `web/wasm_*` subdirectories |
-| `DCMAKE_BUILD_TYPE=Release` | Critical for performance — without it, ~11× slower |
-| `DEigen3_DIR=...` | Tells CMake where Homebrew installed Eigen |
-| `DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=NEVER` | Stops Emscripten from hiding Homebrew packages |
+| Flag                                            | Reason                                                   |
+| ----------------------------------------------- | -------------------------------------------------------- |
+| `build_env=local` + `MESHLIB_LOCAL_BUILD_ENV=1` | Bypass CI_COMMIT_SHA requirement                         |
+| `MESHLIB_GEOMETRY_AS_SUBMODULE=ON`              | Use the git submodule, no Artifactory credentials needed |
+| `MESHLIB_BUILD_WASM_DEMO=ON`                    | Enables the `web/wasm_*` subdirectories                  |
+| `DCMAKE_BUILD_TYPE=Release`                     | Critical for performance — without it, ~11× slower       |
+| `DEigen3_DIR=...`                               | Tells CMake where Homebrew installed Eigen               |
+| `DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=NEVER`      | Stops Emscripten from hiding Homebrew packages           |
 
 ### Build a target
 
@@ -218,6 +218,7 @@ set_target_properties(${TARGET_NAME} PROPERTIES
 ```
 
 The only real differences from the WASM CMakeLists are:
+
 - `add_library(... SHARED ...)` instead of `add_executable(...)`
 - No Emscripten link options
 - References the `.cpp` via relative path (`../wasm_<name>/`)
@@ -253,6 +254,7 @@ bash scripts/build_native_lib.sh
 ```
 
 **Prerequisites:**
+
 - Docker must be running (`docker info` to check)
 - `meshlib/` must be a sibling directory (`../meshlib` relative to `meshlib-python-testing/`)
 
@@ -269,6 +271,7 @@ meshlib-python-testing/app/native/libmeshlib_noise_shells.so            (copied)
 ```
 
 The `.so` files end up in **two** places:
+
 1. Back in the meshlib source tree (because `LIBRARY_OUTPUT_DIRECTORY` writes there)
 2. In `meshlib-python-testing/app/native/` (the explicit `cp` step for deployment)
 
@@ -319,14 +322,14 @@ docker run --rm \                                    # throwaway container
 
 ### Key differences: Docker `.so` build vs macOS `.dylib` build
 
-| Aspect | macOS `.dylib` | Docker `.so` |
-| --- | --- | --- |
-| Compiler | Homebrew GCC (`g++-15`) | Docker `gcc:14` (Debian GCC) |
-| Extra CXX flag | none | `-include cstdint` (Linux compat) |
-| Eigen | `brew install eigen` | Cloned + installed from source inside container |
-| Build dir | `meshlib/build-native/` (persistent) | `/tmp/build-native` (inside container, discarded) |
-| Output ext | `.dylib` | `.so` |
-| Output location | `meshlib/web/native_<name>/` | Same, plus copied to `meshlib-python-testing/app/native/` |
+| Aspect          | macOS `.dylib`                       | Docker `.so`                                              |
+| --------------- | ------------------------------------ | --------------------------------------------------------- |
+| Compiler        | Homebrew GCC (`g++-15`)              | Docker `gcc:14` (Debian GCC)                              |
+| Extra CXX flag  | none                                 | `-include cstdint` (Linux compat)                         |
+| Eigen           | `brew install eigen`                 | Cloned + installed from source inside container           |
+| Build dir       | `meshlib/build-native/` (persistent) | `/tmp/build-native` (inside container, discarded)         |
+| Output ext      | `.dylib`                             | `.so`                                                     |
+| Output location | `meshlib/web/native_<name>/`         | Same, plus copied to `meshlib-python-testing/app/native/` |
 
 ### Why `-include cstdint`?
 
@@ -385,15 +388,15 @@ cp meshlib/web/wasm_wall_thickness/meshlib_wall_thickness.wasm  meshlib-react-fe
 
 ## Troubleshooting
 
-| Problem | Fix |
-| --- | --- |
-| `Eigen3Config.cmake not found` | `brew install eigen` and pass `-DEigen3_DIR=/opt/homebrew/opt/eigen/share/eigen3/cmake` |
-| `CI_COMMIT_SHA` error | Prefix with `MESHLIB_LOCAL_BUILD_ENV=1 build_env=local` |
-| Emscripten can't find packages | Add `-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=NEVER` |
-| `-Werror` on unused variable | Fix the C++ source — both WASM and native share it |
-| Docker build fails to start | Check `docker info` — Docker Desktop must be running |
-| `.dylib` loads but `.so` doesn't | They're built by different compilers; check Docker build output for warnings |
-| CORS / module loading in browser | Serve via `npm run dev` or `python3 -m http.server`, not `file://` |
+| Problem                          | Fix                                                                                     |
+| -------------------------------- | --------------------------------------------------------------------------------------- |
+| `Eigen3Config.cmake not found`   | `brew install eigen` and pass `-DEigen3_DIR=/opt/homebrew/opt/eigen/share/eigen3/cmake` |
+| `CI_COMMIT_SHA` error            | Prefix with `MESHLIB_LOCAL_BUILD_ENV=1 build_env=local`                                 |
+| Emscripten can't find packages   | Add `-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=NEVER`                                         |
+| `-Werror` on unused variable     | Fix the C++ source — both WASM and native share it                                      |
+| Docker build fails to start      | Check `docker info` — Docker Desktop must be running                                    |
+| `.dylib` loads but `.so` doesn't | They're built by different compilers; check Docker build output for warnings            |
+| CORS / module loading in browser | Serve via `npm run dev` or `python3 -m http.server`, not `file://`                      |
 
 ---
 
