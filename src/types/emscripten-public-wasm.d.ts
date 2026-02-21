@@ -75,3 +75,18 @@ declare module "@wasm/meshlib_annotations.js" {
   const createModule: any;
   export default createModule;
 }
+
+declare module "*.meshlib_noise_shells.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "../wasm/meshlib_noise_shells.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "@wasm/meshlib_noise_shells.js" {
+  const createModule: any;
+  export default createModule;
+}

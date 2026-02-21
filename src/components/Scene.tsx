@@ -16,6 +16,8 @@ function Scene() {
         camera.updateProjectionMatrix()
 
         gl.setClearColor(0x000000, 1)
+        gl.shadowMap.enabled = true
+        gl.shadowMap.type = THREE.PCFSoftShadowMap
 
         console.log('Camera position:', camera.position)
         console.log('Camera up:', camera.up)
@@ -51,15 +53,15 @@ function Scene() {
                 position={[50, -50, 100]}
                 intensity={1.5}
                 castShadow
-                shadow-mapSize={[2048, 2048]}
+                shadow-mapSize={[4096, 4096]}
                 shadow-camera-near={0.1}
-                shadow-camera-far={500}
-                shadow-camera-left={-250}
-                shadow-camera-right={250}
-                shadow-camera-top={250}
-                shadow-camera-bottom={-250}
-                shadow-bias={-0.0005}
-                shadow-normalBias={0.05}
+                shadow-camera-far={300}
+                shadow-camera-left={-140}
+                shadow-camera-right={140}
+                shadow-camera-top={140}
+                shadow-camera-bottom={-140}
+                shadow-bias={-0.00015}
+                shadow-normalBias={0.02}
             />
 
             <directionalLight

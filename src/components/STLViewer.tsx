@@ -5,9 +5,11 @@ import * as THREE from 'three'
 
 interface STLViewerProps {
     filename: string
+    doubleSided?: boolean
+    autoScale?: boolean
 }
 
-function STLViewer({ filename }: STLViewerProps) {
+function STLViewer({ filename, doubleSided = false, autoScale = true }: STLViewerProps) {
     const geometry = useLoader(STLLoader, `/stl/${filename}`)
 
     // Center and scale the geometry
@@ -25,7 +27,7 @@ function STLViewer({ filename }: STLViewerProps) {
             const maxDim = Math.max(size.x, size.y, size.z)
 
             // Scale to reasonable size (e.g., 50 units max dimension)
-            if (maxDim > 0) {
+            if (autoScale && maxDim > 0) {
                 const scale = 50 / maxDim
                 geo.scale(scale, scale, scale)
             }
@@ -40,7 +42,7 @@ function STLViewer({ filename }: STLViewerProps) {
         }
 
         return geo
-    }, [geometry])
+    }, [geometry, autoScale])
 
     return (
         <mesh geometry={processedGeometry} castShadow receiveShadow>
@@ -51,7 +53,7 @@ function STLViewer({ filename }: STLViewerProps) {
                 clearcoat={0.15}
                 clearcoatRoughness={0.4}
                 flatShading
-                side={THREE.FrontSide}
+                side={doubleSided ? THREE.DoubleSide : THREE.FrontSide}
             />
         </mesh>
     )

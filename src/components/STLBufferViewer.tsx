@@ -5,9 +5,11 @@ import * as THREE from 'three'
 interface STLBufferViewerProps {
     data: ArrayBuffer
     color?: string
+    doubleSided?: boolean
+    autoScale?: boolean
 }
 
-function processGeometry(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
+function processGeometry(geometry: THREE.BufferGeometry, autoScale: boolean): THREE.BufferGeometry {
     const geo = geometry.clone()
     geo.computeVertexNormals()
     geo.center()
@@ -19,7 +21,7 @@ function processGeometry(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
         bbox.getSize(size)
         const maxDim = Math.max(size.x, size.y, size.z)
 
-        if (maxDim > 0) {
+        if (autoScale && maxDim > 0) {
             const scale = 50 / maxDim
             geo.scale(scale, scale, scale)
         }
@@ -34,12 +36,12 @@ function processGeometry(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
     return geo
 }
 
-function STLBufferViewer({ data, color = '#22c55e' }: STLBufferViewerProps) {
+function STLBufferViewer({ data, color = '#22c55e', doubleSided = false, autoScale = true }: STLBufferViewerProps) {
     const geometry = useMemo(() => {
         const loader = new STLLoader()
         const parsed = loader.parse(data) as THREE.BufferGeometry
-        return processGeometry(parsed)
-    }, [data])
+        return processGeometry(parsed, autoScale)
+    }, [data, autoScale])
 
     return (
         <mesh geometry={geometry} castShadow receiveShadow>
@@ -50,7 +52,7 @@ function STLBufferViewer({ data, color = '#22c55e' }: STLBufferViewerProps) {
                 clearcoat={0.15}
                 clearcoatRoughness={0.4}
                 flatShading
-                side={THREE.FrontSide}
+                side={doubleSided ? THREE.DoubleSide : THREE.FrontSide}
             />
         </mesh>
     )
