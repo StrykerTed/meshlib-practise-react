@@ -117,6 +117,18 @@ Self-intersection detection (`DetectSelfIntersections`) handles triangles that *
 | 5   | Overlapping Triangles  | ❌ Gap              | Not available                                                             | Not available                           | Would need custom implementation       |
 | 6   | Intersecting Triangles | ✅ Full             | `DetectSelfIntersections()`                                               | `RepairMesh()`                          | Fine-grained API also available        |
 
+## Simple Status List (Done vs Not Done)
+
+- 🟢 Planar Holes — Done
+- 🟢 Noise Shells — Done
+- 🟢 Intersecting Triangles — Done
+- 🟢 Inverted Normals — Done (closed-mesh global check + repair)
+- 🔴 Bad Edges — Not Done
+- 🔴 Overlapping Triangles — Not Done
+- 🟢 CMake for WASM target(s) — Done
+- 🟢 CMake for Python native libraries (`.dylib` / `.so`) — Done
+- 🟢 Linux `.so` generation via Docker script — Done
+
 ---
 
 ## Additional MeshLib Capabilities (Not in Requirements, But Available)

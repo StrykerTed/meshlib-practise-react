@@ -10,6 +10,7 @@ import STLBufferViewer from '../components/STLBufferViewer'
 import IntersectionLines from '../components/IntersectionLines'
 import { FillHolesClient } from '../lib/fillHolesClient'
 import { SelfIntersectionsClient } from '../lib/selfIntersectionsClient'
+import { InvertedNormalsClient } from '../lib/invertedNormalsClient'
 import { CanvasContainer } from '../styles/CanvasContainer'
 
 const STL_FILES = [
@@ -18,6 +19,9 @@ const STL_FILES = [
     'icosphere_with_holes.stl',
     'self-intersecting-3d.stl',
     'self-intersecting.stl',
+    'model.stl',
+    'test_noise.stl',
+    'ball_with_missing_faces_inverted_normal.stl',
 ]
 
 function BasicsPage() {
@@ -33,19 +37,31 @@ function BasicsPage() {
     const [intersectionCount, setIntersectionCount] = useState<number | null>(null)
     const [intersectionSegments, setIntersectionSegments] = useState<Float32Array | null>(null)
 
+    const [isCheckingInverted, setIsCheckingInverted] = useState(false)
+    const [isRepairingInverted, setIsRepairingInverted] = useState(false)
+    const [isClosedMesh, setIsClosedMesh] = useState<boolean | null>(null)
+    const [isInvertedNormals, setIsInvertedNormals] = useState<boolean | null>(null)
+    const [signedVolume, setSignedVolume] = useState<number | null>(null)
+    const [localInvertedCount, setLocalInvertedCount] = useState<number | null>(null)
+
     const fillHolesClientRef = useRef<FillHolesClient | null>(null)
     const selfIntersectionsClientRef = useRef<SelfIntersectionsClient | null>(null)
+    const invertedNormalsClientRef = useRef<InvertedNormalsClient | null>(null)
 
     useEffect(() => {
         const client = new FillHolesClient()
         fillHolesClientRef.current = client
         const siClient = new SelfIntersectionsClient()
         selfIntersectionsClientRef.current = siClient
+        const inClient = new InvertedNormalsClient()
+        invertedNormalsClientRef.current = inClient
         return () => {
             fillHolesClientRef.current = null
             client.dispose()
             selfIntersectionsClientRef.current = null
             siClient.dispose()
+            invertedNormalsClientRef.current = null
+            inClient.dispose()
         }
     }, [])
 
@@ -56,6 +72,10 @@ function BasicsPage() {
         setHolesFilledCount(null)
         setIntersectionCount(null)
         setIntersectionSegments(null)
+        setIsClosedMesh(null)
+        setIsInvertedNormals(null)
+        setSignedVolume(null)
+        setLocalInvertedCount(null)
     }, [selectedFile])
 
     async function onFillHoles() {
@@ -157,7 +177,90 @@ function BasicsPage() {
         }
     }
 
-    const isBusy = isFilling || isDetecting || isRepairing
+    async function onCheckInvertedNormals() {
+        const client = invertedNormalsClientRef.current
+        if (!selectedFile || isCheckingInverted || !client) return
+
+        setIsCheckingInverted(true)
+        setError('')
+        setStatus('Loading STL…')
+        setIsClosedMesh(null)
+        setIsInvertedNormals(null)
+        setSignedVolume(null)
+        setLocalInvertedCount(null)
+
+        try {
+            const input = await fetchStlBuffer()
+            setStatus('Checking inverted normals (WASM)…')
+            const startMs = performance.now()
+            const result = await client.detect(input, {
+                onStatus: (stage) => setStatus(stage),
+            })
+            const elapsedMs = performance.now() - startMs
+
+            setIsClosedMesh(result.isClosed)
+            setIsInvertedNormals(result.isInverted)
+            setSignedVolume(result.signedVolume)
+            setLocalInvertedCount(result.localInvertedCount)
+
+            if (result.localInvertedCount > 0) {
+                setStatus(`Detected ${result.localInvertedCount} locally inverted triangle(s) (${elapsedMs.toFixed(0)} ms)`)
+            } else if (!result.isClosed) {
+                setStatus(`Open mesh: no local inverted triangles found (${elapsedMs.toFixed(0)} ms)`)
+            } else if (result.isInverted) {
+                setStatus(`Global inverted orientation detected (${elapsedMs.toFixed(0)} ms)`)
+            } else {
+                setStatus(`Normals orientation looks correct (${elapsedMs.toFixed(0)} ms)`)
+            }
+        } catch (e: any) {
+            console.error('[CheckInvertedNormals] failed:', e)
+            setError(String(e?.message || e))
+            setStatus('')
+        } finally {
+            setIsCheckingInverted(false)
+        }
+    }
+
+    async function onRepairInvertedNormals() {
+        const client = invertedNormalsClientRef.current
+        if (!selectedFile || isRepairingInverted || !client) return
+
+        setIsRepairingInverted(true)
+        setError('')
+        setStatus('Loading STL…')
+
+        try {
+            const input = await fetchStlBuffer()
+            setStatus('Repairing inverted normals (WASM)…')
+            const startMs = performance.now()
+            const result = await client.repair(input, {
+                onStatus: (stage) => setStatus(stage),
+            })
+            const elapsedMs = performance.now() - startMs
+
+            setRepairedStl(result.output)
+            setIsClosedMesh(result.isClosed)
+            setIsInvertedNormals(result.wasInverted)
+            setSignedVolume(result.signedVolumeAfter)
+            setLocalInvertedCount(0)
+
+            if (!result.isClosed) {
+                setStatus(`Open mesh: no inversion repair applied (${elapsedMs.toFixed(0)} ms)`)
+            } else if (result.wasInverted) {
+                setStatus(`Inverted normals repaired (${elapsedMs.toFixed(0)} ms)`)
+            } else {
+                setStatus(`Mesh was already correctly oriented (${elapsedMs.toFixed(0)} ms)`)
+            }
+        } catch (e: any) {
+            console.error('[RepairInvertedNormals] failed:', e)
+            setError(String(e?.message || e))
+            setStatus('')
+        } finally {
+            setIsRepairingInverted(false)
+        }
+    }
+
+    const isBusy = isFilling || isDetecting || isRepairing || isCheckingInverted || isRepairingInverted
     const showSideBySide = Boolean(repairedStl)
     const offsetX = 40
 
@@ -258,6 +361,50 @@ function BasicsPage() {
                             : `⚠ ${intersectionCount} intersection(s)`}
                     </span>
                 )}
+                {holesFilledCount !== null && (
+                    <span style={{
+                        color: holesFilledCount > 0 ? '#fbbf24' : '#4ade80',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        background: 'rgba(15,23,42,0.85)',
+                        padding: '4px 10px',
+                        borderRadius: 8,
+                    }}>
+                        {holesFilledCount > 0
+                            ? `⚠ ${holesFilledCount} hole(s) were filled`
+                            : '✓ No holes detected'}
+                    </span>
+                )}
+                {isClosedMesh !== null && (
+                    <span style={{
+                        color:
+                            localInvertedCount !== null && localInvertedCount > 0
+                                ? '#fca5a5'
+                                : (!isClosedMesh ? '#93c5fd' : (isInvertedNormals ? '#fca5a5' : '#4ade80')),
+                        fontSize: 13,
+                        fontWeight: 600,
+                        background: 'rgba(15,23,42,0.85)',
+                        padding: '4px 10px',
+                        borderRadius: 8,
+                    }}>
+                        {localInvertedCount !== null && localInvertedCount > 0
+                            ? `⚠ ${localInvertedCount} locally inverted triangle(s)`
+                            : (!isClosedMesh
+                                ? 'ℹ Open mesh (no global orientation verdict)'
+                                : (isInvertedNormals ? '⚠ Global orientation inverted' : '✓ Normals orientation OK'))}
+                        {signedVolume !== null && isClosedMesh ? ` — vol=${signedVolume.toFixed(4)}` : ''}
+                    </span>
+                )}
+                <HelloButton
+                    onClick={onCheckInvertedNormals}
+                    disabled={!selectedFile || isBusy}
+                    text={isCheckingInverted ? 'Checking…' : 'Check Inverted Normals'}
+                />
+                <HelloButton
+                    onClick={onRepairInvertedNormals}
+                    disabled={!selectedFile || isBusy}
+                    text={isRepairingInverted ? 'Repairing…' : 'Repair Inverted Normals'}
+                />
                 <HelloButton
                     onClick={onDetectIntersections}
                     disabled={!selectedFile || isBusy}

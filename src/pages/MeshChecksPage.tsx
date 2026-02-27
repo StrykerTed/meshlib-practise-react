@@ -7,6 +7,8 @@ import STLViewer from '../components/STLViewer'
 import FileSelector from '../components/FileSelector'
 import { FillHolesClient } from '../lib/fillHolesClient'
 import { SelfIntersectionsClient } from '../lib/selfIntersectionsClient'
+import { NoiseShellsClient } from '../lib/noiseShellsClient'
+import { InvertedNormalsClient } from '../lib/invertedNormalsClient'
 import { CanvasContainer } from '../styles/CanvasContainer'
 
 const COMPLEX_STL_FILES = [
@@ -76,9 +78,13 @@ function MeshChecksPage() {
 
     const [holesCheck, setHolesCheck] = useState<CheckResult>(INITIAL_CHECK)
     const [intersectionsCheck, setIntersectionsCheck] = useState<CheckResult>(INITIAL_CHECK)
+    const [noiseShellsCheck, setNoiseShellsCheck] = useState<CheckResult>(INITIAL_CHECK)
+    const [invertedNormalsCheck, setInvertedNormalsCheck] = useState<CheckResult>(INITIAL_CHECK)
 
     const fillHolesRef = useRef<FillHolesClient | null>(null)
     const selfIntRef = useRef<SelfIntersectionsClient | null>(null)
+    const noiseRef = useRef<NoiseShellsClient | null>(null)
+    const invertedRef = useRef<InvertedNormalsClient | null>(null)
 
     // Boot WASM clients once
     useEffect(() => {
@@ -86,11 +92,19 @@ function MeshChecksPage() {
         fillHolesRef.current = fh
         const si = new SelfIntersectionsClient()
         selfIntRef.current = si
+        const ns = new NoiseShellsClient()
+        noiseRef.current = ns
+        const inv = new InvertedNormalsClient()
+        invertedRef.current = inv
         return () => {
             fillHolesRef.current = null
             fh.dispose()
             selfIntRef.current = null
             si.dispose()
+            noiseRef.current = null
+            ns.dispose()
+            invertedRef.current = null
+            inv.dispose()
         }
     }, [])
 
@@ -98,6 +112,8 @@ function MeshChecksPage() {
     useEffect(() => {
         setHolesCheck(INITIAL_CHECK)
         setIntersectionsCheck(INITIAL_CHECK)
+        setNoiseShellsCheck(INITIAL_CHECK)
+        setInvertedNormalsCheck(INITIAL_CHECK)
     }, [selectedFile])
 
     // ── Run all checks ──────────────────────────────────────────────────
@@ -107,6 +123,8 @@ function MeshChecksPage() {
         setIsRunning(true)
         setHolesCheck({ status: 'running', summary: 'Checking…' })
         setIntersectionsCheck({ status: 'running', summary: 'Checking…' })
+        setNoiseShellsCheck({ status: 'running', summary: 'Checking…' })
+        setInvertedNormalsCheck({ status: 'running', summary: 'Checking…' })
 
         // Fetch the STL once — both checks share it
         let inputBuf: ArrayBuffer
@@ -118,6 +136,8 @@ function MeshChecksPage() {
             const msg = String(e?.message || e)
             setHolesCheck({ status: 'error', summary: 'Fetch error', detail: msg })
             setIntersectionsCheck({ status: 'error', summary: 'Fetch error', detail: msg })
+            setNoiseShellsCheck({ status: 'error', summary: 'Fetch error', detail: msg })
+            setInvertedNormalsCheck({ status: 'error', summary: 'Fetch error', detail: msg })
             setIsRunning(false)
             return
         }
@@ -127,7 +147,9 @@ function MeshChecksPage() {
         // Run both checks in parallel
         const holesPromise = runHolesCheck(inputBuf, inputTris)
         const intPromise = runIntersectionsCheck(inputBuf)
-        await Promise.allSettled([holesPromise, intPromise])
+        const noisePromise = runNoiseShellsCheck(inputBuf)
+        const invPromise = runInvertedNormalsCheck(inputBuf)
+        await Promise.allSettled([holesPromise, intPromise, noisePromise, invPromise])
 
         setIsRunning(false)
     }
@@ -226,10 +248,99 @@ function MeshChecksPage() {
         }
     }
 
+    async function runNoiseShellsCheck(inputBuf: ArrayBuffer) {
+        const client = noiseRef.current
+        if (!client) {
+            setNoiseShellsCheck({ status: 'error', summary: 'Client not ready' })
+            return
+        }
+        try {
+            const startMs = performance.now()
+            const result = await client.detect(inputBuf.slice(0), {
+                onStatus: (s) =>
+                    setNoiseShellsCheck((prev) => ({ ...prev, summary: s })),
+            })
+            const elapsedMs = performance.now() - startMs
+
+            if (result.noiseCount === 0) {
+                setNoiseShellsCheck({
+                    status: 'pass',
+                    summary: 'No noise shells',
+                    detail: `1 connected component (${elapsedMs.toFixed(0)} ms)`,
+                })
+            } else {
+                setNoiseShellsCheck({
+                    status: 'fail',
+                    summary: `${result.noiseCount} noise shell(s)`,
+                    detail: `${result.totalComponents} component(s) total (${elapsedMs.toFixed(0)} ms)`,
+                })
+            }
+        } catch (e: any) {
+            setNoiseShellsCheck({
+                status: 'error',
+                summary: 'Check failed',
+                detail: String(e?.message || e),
+            })
+        }
+    }
+
+    async function runInvertedNormalsCheck(inputBuf: ArrayBuffer) {
+        const client = invertedRef.current
+        if (!client) {
+            setInvertedNormalsCheck({ status: 'error', summary: 'Client not ready' })
+            return
+        }
+        try {
+            const startMs = performance.now()
+            const result = await client.detect(inputBuf.slice(0), {
+                onStatus: (s) =>
+                    setInvertedNormalsCheck((prev) => ({ ...prev, summary: s })),
+            })
+            const elapsedMs = performance.now() - startMs
+
+            if (!result.isClosed) {
+                if (result.localInvertedCount > 0) {
+                    setInvertedNormalsCheck({
+                        status: 'fail',
+                        summary: `${result.localInvertedCount} locally inverted tri(s)`,
+                        detail: `Open mesh; local orientation inconsistencies found (${elapsedMs.toFixed(0)} ms)`,
+                    })
+                } else {
+                    setInvertedNormalsCheck({
+                        status: 'pass',
+                        summary: 'Open mesh (no local inversions)',
+                        detail: `Global orientation check applies to closed meshes (${elapsedMs.toFixed(0)} ms)`,
+                    })
+                }
+                return
+            }
+
+            if (result.localInvertedCount > 0 || result.isInverted) {
+                setInvertedNormalsCheck({
+                    status: 'fail',
+                    summary: `${result.localInvertedCount} locally inverted tri(s)`,
+                    detail: `Signed volume ${result.signedVolume?.toFixed(6)} (${elapsedMs.toFixed(0)} ms)`,
+                })
+            } else {
+                setInvertedNormalsCheck({
+                    status: 'pass',
+                    summary: 'Normals orientation OK',
+                    detail: `Signed volume ${result.signedVolume?.toFixed(6)} (${elapsedMs.toFixed(0)} ms)`,
+                })
+            }
+        } catch (e: any) {
+            setInvertedNormalsCheck({
+                status: 'error',
+                summary: 'Check failed',
+                detail: String(e?.message || e),
+            })
+        }
+    }
+
     // ── Overall verdict ─────────────────────────────────────────────────
 
     function overallStatus(): CheckStatus {
-        const checks = [holesCheck, intersectionsCheck]
+        const checks = [holesCheck, intersectionsCheck, noiseShellsCheck, invertedNormalsCheck]
         if (checks.some((c) => c.status === 'running')) return 'running'
         if (checks.some((c) => c.status === 'error')) return 'error'
         if (checks.every((c) => c.status === 'idle')) return 'idle'
@@ -312,6 +423,8 @@ function MeshChecksPage() {
                     {[
                         { label: 'Holes', check: holesCheck },
                         { label: 'Self-Intersections', check: intersectionsCheck },
+                        { label: 'Noise Shells', check: noiseShellsCheck },
+                        { label: 'Inverted Normals', check: invertedNormalsCheck },
                     ].map(({ label, check }) => {
                         const c = badgeColors(check.status)
                         return (

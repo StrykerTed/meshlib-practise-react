@@ -72,7 +72,6 @@ function withTimeout<T>(
 
 async function getCreateModule(): Promise<CreateModule> {
   if (!createModulePromise) {
-    // @ts-expect-error -- Emscripten glue JS has no TS declarations
     createModulePromise = import("../wasm/meshlib_fill_holes.js").then(
       (m: any) => m.default as CreateModule,
     );

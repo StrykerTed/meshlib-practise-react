@@ -24,6 +24,9 @@
     {
       "path": "../SykloneAll/Syklone/prd-svc-case-manager",
     },
+    {
+      "path": "../meshlib-compiler-for-wasm",
+    },
   ],
   "settings": {
     "liveServer.settings.multiRootWorkspaceName": "meshlib",
