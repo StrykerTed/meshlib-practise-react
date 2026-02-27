@@ -19,7 +19,6 @@ const STL_FILES = [
     'icosphere_with_holes.stl',
     'self-intersecting-3d.stl',
     'self-intersecting.stl',
-    'model.stl',
     'test_noise.stl',
     'ball_with_missing_faces_inverted_normal.stl',
 ]
