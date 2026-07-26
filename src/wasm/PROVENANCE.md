@@ -29,34 +29,57 @@ provenance below is reconstructed from file mtimes and is best-effort, not autho
 The reference checkout was `/Users/ted.tedford/Public/MyLocalRepos/meshlib` at commit
 `d4c6f67e5d18582f687e799f4da1859d9008b1d1` — `master`, `VERSION` 1.6.49, dated 2026-03-09.
 
-| Artifact | Built (mtime) | Notes |
-|---|---|---|
-| `meshlib_fill_holes` | 2026-02-05 | |
-| `meshlib_annotations` | 2026-02-07 | |
-| `meshlib_simplification` | 2026-02-07 | |
-| `meshlib_smoothing` | 2026-02-07 | |
-| `meshlib_noise_shells` | 2026-02-19 | |
-| `meshlib_inverted_normals` | 2026-02-26 | |
-| `meshlib_bad_edges` | 2026-03-01 | |
-| `meshlib_findholes_v2` | 2026-03-01 | shares `fill_holes_api.cpp` |
-| `meshlib_overlapping_triangles` | 2026-03-01 | |
-| `meshlib_self_intersections` | 2026-03-01 | |
-| `meshlib_repair_pipeline` | 2026-06-22 | **see caveat below** |
+| Artifact | Built (mtime) | Has T-junction fix? | Notes |
+|---|---|---|---|
+| `meshlib_simplification` | 2026-02-07 | n/a | |
+| `meshlib_annotations` | 2026-02-07 | n/a | |
+| `meshlib_smoothing` | 2026-02-07 | n/a | |
+| `meshlib_fill_holes` | 2026-02-15 | no | pre-dates the fix |
+| `meshlib_noise_shells` | 2026-02-19 | n/a | |
+| `meshlib_inverted_normals` | 2026-02-26 | n/a | |
+| `meshlib_overlapping_triangles` | 2026-03-01 | n/a | |
+| `meshlib_self_intersections` | 2026-03-01 | n/a | |
+| `meshlib_repair_pipeline` | 2026-06-22 | **yes** (via `FindHoles`) | |
+| `meshlib_findholes_v2` | 2026-06-24 13:28 | **yes** (via `FindHoles`) | shares `fill_holes_api.cpp` |
+| `meshlib_bad_edges` | 2026-06-24 13:36 | **yes** (direct call) | |
+
+"n/a" means the module does not call `FindHoles()` and is unaffected.
 
 ### Caveat: these are not reproducible from a clean commit
 
-The reference checkout's HEAD is dated 2026-03-09, but `meshlib_repair_pipeline.wasm` was built
-2026-06-22. It was therefore built from a **dirty working tree**, not from any commit — and that
-tree carried uncommitted local changes, including `ClassifyTJunctionSegments` (ADO #20089), which
-alters `FindHoles()` behaviour and is consumed by the repair pipeline's hole count.
+The reference checkout's HEAD is dated 2026-03-09, but several artifacts were built later, from a
+**dirty working tree** rather than from any commit. That tree carried uncommitted local changes,
+notably `ClassifyTJunctionSegments` (ADO #20089).
 
-Those working-tree changes are preserved as patch files in `wasm-src/patches/`. Rebuilding
-`repair_pipeline` byte-for-identically in behaviour requires applying
-`patches/tjunction-ado20089.patch`. Without it, hole counts will differ on meshes containing
-T-junctions.
+That fix has two call sites:
 
-Going forward, every rebuild should update the table above with the meshlib commit hash and the
-list of applied patches.
+- `FillHoles_C::FindHoles()` itself (`lib/extended/src/algorithms/fill_holes.cpp:454`) — so every
+  module that calls `FindHoles` inherits it
+- `wasm_bad_edges/bad_edges_api.cpp:245` — a direct call
+
+Rebuilding any of the three "yes" modules above **requires applying
+`wasm-src/patches/tjunction-ado20089.patch`**. Without it, hole counts and bad-edge counts will
+differ on meshes containing T-junctions — a geometrically watertight mesh with non-conforming
+triangulation will be wrongly reported as having holes. Background:
+`docs/mesh-checks-tjunction-fix-20089.md`. Regression test:
+`meshlib-python-testing/tests/test_tjunction_holes.py` (7 cases).
+
+### Drift found and corrected, 2026-07-26
+
+At the time of this commit three artifacts in this directory were **stale** — the fixed builds
+existed only in the untracked `meshlib/web/` working directory and had never been copied across:
+
+| Module | Was | Corrected to |
+|---|---|---|
+| `meshlib_bad_edges` | 2026-03-01 | 2026-06-24 13:36 |
+| `meshlib_findholes_v2` | 2026-03-01 | 2026-06-24 13:28 |
+| `meshlib_fill_holes` | 2026-02-05 | 2026-02-15 |
+
+In other words the T-junction fix had been built but never shipped into this app. This is exactly
+the failure mode that untracked artifacts and a manual copy step produce.
+
+Going forward, every rebuild must update the table above with the meshlib commit hash and the list
+of applied patches, in the same commit as the binaries.
 
 ## Toolchain used
 
