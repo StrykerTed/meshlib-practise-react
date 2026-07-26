@@ -9,6 +9,8 @@ import { FillHolesClient } from '../lib/fillHolesClient'
 import { SelfIntersectionsClient } from '../lib/selfIntersectionsClient'
 import { NoiseShellsClient } from '../lib/noiseShellsClient'
 import { InvertedNormalsClient } from '../lib/invertedNormalsClient'
+import { OverlappingTrianglesClient } from '../lib/overlappingTrianglesClient'
+import { BadEdgesClient } from '../lib/badEdgesClient'
 import { CanvasContainer } from '../styles/CanvasContainer'
 
 const COMPLEX_STL_FILES = [
@@ -78,11 +80,15 @@ function MeshChecksPage() {
 
     const [holesCheck, setHolesCheck] = useState<CheckResult>(INITIAL_CHECK)
     const [intersectionsCheck, setIntersectionsCheck] = useState<CheckResult>(INITIAL_CHECK)
+    const [overlappingCheck, setOverlappingCheck] = useState<CheckResult>(INITIAL_CHECK)
+    const [badEdgesCheck, setBadEdgesCheck] = useState<CheckResult>(INITIAL_CHECK)
     const [noiseShellsCheck, setNoiseShellsCheck] = useState<CheckResult>(INITIAL_CHECK)
     const [invertedNormalsCheck, setInvertedNormalsCheck] = useState<CheckResult>(INITIAL_CHECK)
 
     const fillHolesRef = useRef<FillHolesClient | null>(null)
     const selfIntRef = useRef<SelfIntersectionsClient | null>(null)
+    const overlappingRef = useRef<OverlappingTrianglesClient | null>(null)
+    const badEdgesRef = useRef<BadEdgesClient | null>(null)
     const noiseRef = useRef<NoiseShellsClient | null>(null)
     const invertedRef = useRef<InvertedNormalsClient | null>(null)
 
@@ -92,6 +98,10 @@ function MeshChecksPage() {
         fillHolesRef.current = fh
         const si = new SelfIntersectionsClient()
         selfIntRef.current = si
+        const overlap = new OverlappingTrianglesClient()
+        overlappingRef.current = overlap
+        const be = new BadEdgesClient()
+        badEdgesRef.current = be
         const ns = new NoiseShellsClient()
         noiseRef.current = ns
         const inv = new InvertedNormalsClient()
@@ -101,6 +111,10 @@ function MeshChecksPage() {
             fh.dispose()
             selfIntRef.current = null
             si.dispose()
+            overlappingRef.current = null
+            overlap.dispose()
+            badEdgesRef.current = null
+            be.dispose()
             noiseRef.current = null
             ns.dispose()
             invertedRef.current = null
@@ -112,6 +126,8 @@ function MeshChecksPage() {
     useEffect(() => {
         setHolesCheck(INITIAL_CHECK)
         setIntersectionsCheck(INITIAL_CHECK)
+        setOverlappingCheck(INITIAL_CHECK)
+        setBadEdgesCheck(INITIAL_CHECK)
         setNoiseShellsCheck(INITIAL_CHECK)
         setInvertedNormalsCheck(INITIAL_CHECK)
     }, [selectedFile])
@@ -123,6 +139,8 @@ function MeshChecksPage() {
         setIsRunning(true)
         setHolesCheck({ status: 'running', summary: 'Checking…' })
         setIntersectionsCheck({ status: 'running', summary: 'Checking…' })
+        setOverlappingCheck({ status: 'running', summary: 'Checking…' })
+        setBadEdgesCheck({ status: 'running', summary: 'Checking…' })
         setNoiseShellsCheck({ status: 'running', summary: 'Checking…' })
         setInvertedNormalsCheck({ status: 'running', summary: 'Checking…' })
 
@@ -136,6 +154,8 @@ function MeshChecksPage() {
             const msg = String(e?.message || e)
             setHolesCheck({ status: 'error', summary: 'Fetch error', detail: msg })
             setIntersectionsCheck({ status: 'error', summary: 'Fetch error', detail: msg })
+            setOverlappingCheck({ status: 'error', summary: 'Fetch error', detail: msg })
+            setBadEdgesCheck({ status: 'error', summary: 'Fetch error', detail: msg })
             setNoiseShellsCheck({ status: 'error', summary: 'Fetch error', detail: msg })
             setInvertedNormalsCheck({ status: 'error', summary: 'Fetch error', detail: msg })
             setIsRunning(false)
@@ -147,11 +167,92 @@ function MeshChecksPage() {
         // Run both checks in parallel
         const holesPromise = runHolesCheck(inputBuf, inputTris)
         const intPromise = runIntersectionsCheck(inputBuf)
+        const overlapPromise = runOverlappingCheck(inputBuf)
+        const badEdgesPromise = runBadEdgesCheck(inputBuf)
         const noisePromise = runNoiseShellsCheck(inputBuf)
         const invPromise = runInvertedNormalsCheck(inputBuf)
-        await Promise.allSettled([holesPromise, intPromise, noisePromise, invPromise])
+        await Promise.allSettled([
+            holesPromise,
+            intPromise,
+            overlapPromise,
+            badEdgesPromise,
+            noisePromise,
+            invPromise,
+        ])
 
         setIsRunning(false)
+    }
+
+    async function runOverlappingCheck(inputBuf: ArrayBuffer) {
+        const client = overlappingRef.current
+        if (!client) {
+            setOverlappingCheck({ status: 'error', summary: 'Client not ready' })
+            return
+        }
+        try {
+            const startMs = performance.now()
+            const result = await client.detect(inputBuf.slice(0), {
+                onStatus: (s) =>
+                    setOverlappingCheck((prev) => ({ ...prev, summary: s })),
+            })
+            const elapsedMs = performance.now() - startMs
+
+            if (result.count === 0) {
+                setOverlappingCheck({
+                    status: 'pass',
+                    summary: 'No overlapping triangles',
+                    detail: `MeshLib detect returned 0 overlaps (${elapsedMs.toFixed(0)} ms)`,
+                })
+            } else {
+                setOverlappingCheck({
+                    status: 'fail',
+                    summary: `${result.count} overlap(s)`,
+                    detail: `MeshLib detected overlapping triangle pairs (${elapsedMs.toFixed(0)} ms)`,
+                })
+            }
+        } catch (e: any) {
+            setOverlappingCheck({
+                status: 'error',
+                summary: 'Check failed',
+                detail: String(e?.message || e),
+            })
+        }
+    }
+
+    async function runBadEdgesCheck(inputBuf: ArrayBuffer) {
+        const client = badEdgesRef.current
+        if (!client) {
+            setBadEdgesCheck({ status: 'error', summary: 'Client not ready' })
+            return
+        }
+        try {
+            const startMs = performance.now()
+            const result = await client.detect(inputBuf.slice(0), {
+                onStatus: (s) =>
+                    setBadEdgesCheck((prev) => ({ ...prev, summary: s })),
+            })
+            const elapsedMs = performance.now() - startMs
+
+            if (result.badEdgesCount === 0) {
+                setBadEdgesCheck({
+                    status: 'pass',
+                    summary: 'No bad edges',
+                    detail: `Contours=${result.badContoursCount}, boundary=${result.boundaryEdgesCount}, non-manifold=${result.nonManifoldEdgesCount} (${elapsedMs.toFixed(0)} ms)`,
+                })
+            } else {
+                setBadEdgesCheck({
+                    status: 'fail',
+                    summary: `${result.badEdgesCount} bad edge(s)`,
+                    detail: `Contours=${result.badContoursCount}, boundary=${result.boundaryEdgesCount}, non-manifold=${result.nonManifoldEdgesCount} (${elapsedMs.toFixed(0)} ms)`,
+                })
+            }
+        } catch (e: any) {
+            setBadEdgesCheck({
+                status: 'error',
+                summary: 'Check failed',
+                detail: String(e?.message || e),
+            })
+        }
     }
 
     async function runHolesCheck(inputBuf: ArrayBuffer, inputTris: number | null) {
@@ -340,7 +441,14 @@ function MeshChecksPage() {
     // ── Overall verdict ─────────────────────────────────────────────────
 
     function overallStatus(): CheckStatus {
-        const checks = [holesCheck, intersectionsCheck, noiseShellsCheck, invertedNormalsCheck]
+        const checks = [
+            holesCheck,
+            intersectionsCheck,
+            overlappingCheck,
+            badEdgesCheck,
+            noiseShellsCheck,
+            invertedNormalsCheck,
+        ]
         if (checks.some((c) => c.status === 'running')) return 'running'
         if (checks.some((c) => c.status === 'error')) return 'error'
         if (checks.every((c) => c.status === 'idle')) return 'idle'
@@ -423,6 +531,8 @@ function MeshChecksPage() {
                     {[
                         { label: 'Holes', check: holesCheck },
                         { label: 'Self-Intersections', check: intersectionsCheck },
+                        { label: 'Overlapping Triangles', check: overlappingCheck },
+                        { label: 'Bad Edges', check: badEdgesCheck },
                         { label: 'Noise Shells', check: noiseShellsCheck },
                         { label: 'Inverted Normals', check: invertedNormalsCheck },
                     ].map(({ label, check }) => {

@@ -6,7 +6,15 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc && vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "test:e2e": "playwright test",
+        "test:e2e:ui": "playwright test --ui",
+        "test:e2e:strict": "playwright test tests/mesh-checks-text.strict.spec.ts",
+        "test:e2e:pdf": "playwright test tests/mesh-checks-text.pdf.spec.ts",
+        "test:e2e:video": "PW_VIDEO=on playwright test tests/mesh-checks-text.spec.ts",
+        "test:parity": "node tools/meshchecks_python_react_parity.js",
+        "test:parity:strict": "node tools/meshchecks_python_react_parity.js --strict",
+        "test:parity:all": "node tools/meshchecks_python_react_parity.js --all-parts"
     },
     "dependencies": {
         "@react-three/drei": "^9.102.0",
@@ -19,6 +27,7 @@
     },
     "devDependencies": {
         "@types/node": "^25.2.1",
+        "@playwright/test": "^1.55.0",
         "@types/react": "^18.2.66",
         "@types/react-dom": "^18.2.22",
         "@types/three": "^0.162.0",

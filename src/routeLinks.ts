@@ -36,9 +36,27 @@ export const routeLinks: RouteLink[] = [
       "Run diagnostic checks on STL meshes to verify geometry integrity.                                                                        ",
   },
   {
+    title: "Mesh Checks (Text Test)",
+    path: "/mesh-checks-text",
+    description:
+      "Run the attached STL fixture set in a non-3D table view for deterministic testing and automation.",
+  },
+  {
+    title: "WASM Checks Test",
+    path: "/wasm-checks",
+    description:
+      "Upload an STL and run all WASM diagnostics checks (holes v2, self-intersections, overlapping triangles, bad edges, noise shells, inverted normals).",
+  },
+  {
     title: "Noise Checks",
     path: "/noise-checks",
     description:
       "Noise shells are small, disconnected triangle clusters in an STL mesh with no valid enclosed volume.",
+  },
+  {
+    title: "Repair Pipeline",
+    path: "/repair",
+    description:
+      "One-click mesh repair: remove duplicate/degenerate faces, close holes, drop noise shells, and flip inverted faces outward — with a before/after validation report.",
   },
 ];

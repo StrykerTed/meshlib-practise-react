@@ -24,6 +24,12 @@ type EmscriptenModule = {
     outRemovedFacesPtr: number,
     errPtrPtr: number,
   ) => number;
+  _meshlib_detect_self_intersections_triangles_stl?: (
+    inPtr: number,
+    inSize: number,
+    outTriangleCountPtr: number,
+    errPtrPtr: number,
+  ) => number;
   _meshlib_free: (ptr: number) => void;
   HEAPU8: Uint8Array;
   HEAPU32: Uint32Array;
@@ -181,7 +187,7 @@ async function handleDetect(msg: DetectRequest) {
         errPtrPtr,
       );
 
-      const count = Module.HEAPU32[outCountPtr >> 2];
+      const segmentCount = Module.HEAPU32[outCountPtr >> 2];
       const segPtr = Module.HEAPU32[outSegmentsDataPtr >> 2];
       const segBytes = Module.HEAPU32[outSegmentsSizePtr >> 2];
       const errPtr = Module.HEAPU32[errPtrPtr >> 2];
@@ -200,7 +206,33 @@ async function handleDetect(msg: DetectRequest) {
         return;
       }
 
-      // Copy segment float32 data out of WASM heap before freeing.
+      const segmentCountFromBytes = segBytes > 0 ? Math.floor(segBytes / (6 * 4)) : 0;
+      let count = Math.max(segmentCount, segmentCountFromBytes);
+      if (typeof Module._meshlib_detect_self_intersections_triangles_stl === "function") {
+        const outTriangleCountPtr = Module._malloc(4);
+        const triangleErrPtrPtr = Module._malloc(4);
+        Module.HEAPU32[outTriangleCountPtr >> 2] = 0;
+        Module.HEAPU32[triangleErrPtrPtr >> 2] = 0;
+
+        try {
+          const rcTriangles = Module._meshlib_detect_self_intersections_triangles_stl(
+            inPtr,
+            inputBytes.length,
+            outTriangleCountPtr,
+            triangleErrPtrPtr,
+          );
+          if (rcTriangles === 0) {
+            count = Module.HEAPU32[outTriangleCountPtr >> 2];
+          } else {
+            const triangleErrPtr = Module.HEAPU32[triangleErrPtrPtr >> 2];
+            if (triangleErrPtr) Module._meshlib_free(triangleErrPtr);
+          }
+        } finally {
+          Module._free(outTriangleCountPtr);
+          Module._free(triangleErrPtrPtr);
+        }
+      }
+
       let segmentsBuf: ArrayBuffer = new ArrayBuffer(0);
       if (segPtr && segBytes > 0) {
         const floatCount = segBytes / 4;

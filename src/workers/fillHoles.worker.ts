@@ -153,13 +153,11 @@ async function handleJobMessage(e: MessageEvent<RequestMessage>) {
       const outBytes = Module.HEAPU8.slice(outPtr, outPtr + outSize);
       Module._meshlib_free(outPtr);
 
-      // The return code might contain the number of holes filled
-      const holesFilledCount = rc;
-      console.log("[FillHoles Worker] Holes filled count:", holesFilledCount);
+      const holesFilledCount: number | undefined = undefined;
 
       postStatus(
         id,
-        `FillHoles complete. Output bytes: ${outBytes.byteLength}, Holes filled: ${holesFilledCount}`,
+        `FillHoles complete. Output bytes: ${outBytes.byteLength}`,
       );
 
       const msg: ResponseMessage = {

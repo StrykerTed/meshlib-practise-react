@@ -50,13 +50,13 @@ self_intersections_api.cpp  →  Emscripten  →  .wasm + .js   →  Browser (JS
 
 ### Side-by-Side Comparison
 
-|                        | Browser (JS)                                                                                                               | Server (Python)                                                                                                                                             |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Binaries**           | `meshlib_self_intersections.wasm`, `meshlib_fill_holes.wasm`, `meshlib_noise_shells.wasm`, `meshlib_inverted_normals.wasm` | `libmeshlib_self_intersections.dylib`, `libmeshlib_fill_holes.dylib`, `libmeshlib_noise_shells.dylib`, `libmeshlib_inverted_normals.dylib` (`.so` on Linux) |
-| **Loader**             | Emscripten JS glue (`.js`)                                                                                                 | Python `ctypes.CDLL()`                                                                                                                                      |
-| **Same C++ source?**   | ✅ `self_intersections_api.cpp`, `fill_holes_api.cpp`                                                                      | ✅ same files                                                                                                                                               |
-| **Same exported fns?** | ✅ `meshlib_detect_self_intersections_stl` etc.                                                                            | ✅ identical symbols                                                                                                                                        |
-| **Compiler**           | Emscripten → WASM bytecode                                                                                                 | GCC `-O3` → native ARM64 machine code                                                                                                                       |
+|                        | Browser (JS)                                                                                                               | Server (Python)                                                                                                                                                                           |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Binaries**           | `meshlib_self_intersections.wasm`, `meshlib_fill_holes.wasm`, `meshlib_overlapping_triangles.wasm`, `meshlib_bad_edges.wasm`, `meshlib_noise_shells.wasm`, `meshlib_inverted_normals.wasm` | `libmeshlib_self_intersections.dylib`, `libmeshlib_fill_holes.dylib`, `libmeshlib_bad_edges.dylib`, `libmeshlib_noise_shells.dylib`, `libmeshlib_inverted_normals.dylib` (`.so` on Linux) |
+| **Loader**             | Emscripten JS glue (`.js`)                                                                                                 | Python `ctypes.CDLL()`                                                                                                                                                                    |
+| **Same C++ source?**   | ✅ `self_intersections_api.cpp`, `fill_holes_api.cpp`                                                                      | ✅ same files                                                                                                                                                                             |
+| **Same exported fns?** | ✅ `meshlib_detect_self_intersections_stl` etc.                                                                            | ✅ identical symbols                                                                                                                                                                      |
+| **Compiler**           | Emscripten → WASM bytecode                                                                                                 | GCC `-O3` → native ARM64 machine code                                                                                                                                                     |
 
 ---
 
@@ -66,24 +66,59 @@ self_intersections_api.cpp  →  Emscripten  →  .wasm + .js   →  Browser (JS
 
 | File                                           | Change                                                                                                                                                                            |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `web/wasm_overlapping_triangles/CMakeLists.txt` | WASM target for overlapping-triangle **detection** (`meshlib_overlapping_triangles.{js,wasm}`).                                                                                  |
+| `web/wasm_bad_edges/CMakeLists.txt`             | WASM target for bad-edges/bad-contours **detection** (`meshlib_bad_edges.{js,wasm}`).                                                                                           |
 | `web/native_self_intersections/CMakeLists.txt` | **New.** Builds `self_intersections_api.cpp` as a `SHARED` library. Outputs `libmeshlib_self_intersections.dylib` (macOS) or `.so` (Linux) into `web/native_self_intersections/`. |
 | `web/native_fill_holes/CMakeLists.txt`         | **New.** Builds `fill_holes_api.cpp` as a `SHARED` library. Outputs `libmeshlib_fill_holes.dylib` / `.so`. Adds `-Wno-sign-compare` for a GCC warning in the raw-mesh helper.     |
+| `web/native_bad_edges/CMakeLists.txt`          | **New.** Builds `bad_edges_api.cpp` as a `SHARED` library. Outputs `libmeshlib_bad_edges.dylib` / `.so`.                                                                          |
 | `web/native_noise_shells/CMakeLists.txt`       | **New.** Builds `noise_shells_api.cpp` as a `SHARED` library. Outputs `libmeshlib_noise_shells.dylib` / `.so`.                                                                    |
 | `web/native_inverted_normals/CMakeLists.txt`   | **New.** Builds `inverted_normals_api.cpp` as a `SHARED` library. Outputs `libmeshlib_inverted_normals.dylib` / `.so`.                                                            |
-| `CMakeLists.txt` (root, line ~41)              | Added option `MESHLIB_BUILD_NATIVE_PYTHON_LIBS` (default `OFF`). When `ON` and not Emscripten, runs `add_subdirectory` for both native targets.                                   |
+| `CMakeLists.txt` (root, line ~41)              | Added option `MESHLIB_BUILD_NATIVE_PYTHON_LIBS` (default `OFF`). When `ON` and not Emscripten, runs `add_subdirectory` for native targets; WASM demo block includes overlapping + bad-edges targets. |
 
-The existing WASM build (`web/wasm_self_intersections/`) is **completely untouched**.
+The existing WASM pipeline remains browser-oriented and uses Emscripten JS glue + `.wasm` assets.
+
+## Browser WASM Details (meshlib-react-fe)
+
+`meshlib-react-fe` loads MeshLib WebAssembly through worker-backed clients in `src/lib/*Client.ts` and `src/workers/*.worker.ts`.
+
+Detection coverage expected in browser WASM:
+
+- `meshlib_self_intersections.{js,wasm}`
+- `meshlib_fill_holes.{js,wasm}`
+- `meshlib_overlapping_triangles.{js,wasm}`
+- `meshlib_bad_edges.{js,wasm}`
+- `meshlib_noise_shells.{js,wasm}`
+- `meshlib_inverted_normals.{js,wasm}`
+
+### Detection-only constraint for new WASMs
+
+For the newly added browser checks (`overlapping_triangles`, `bad_edges`), WASM exports are **detect-only**.
+
+- ✅ Allowed: detection/statistics APIs (`meshlib_detect_*`)
+- ❌ Not allowed: any mesh-fix/repair mutation API in these new WASM modules
+
+This keeps UI checks non-destructive and aligned with case-manager reporting.
+
+### JavaScript module extension policy
+
+Use Emscripten glue files as `.js` only.
+
+- ✅ `meshlib_<tool>.js`
+- ❌ `meshlib_<tool>.mjs`
+
+`meshlib-react-fe` imports these modules directly from `src/wasm/` in workers, so `.js` is the required convention.
 
 ### `meshlib-python-testing` repo (Python side)
 
-| File                               | Change                                                                                                                            |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `app/wasm/` (entire directory)     | **Deleted.** Removed the `wasmtime` loader, `.wasm` binary, and all WASI code.                                                    |
-| `app/native/self_intersections.py` | **New.** `ctypes` wrapper class `SelfIntersections` with `.detect()` and `.repair()` methods matching the C signatures exactly.   |
-| `app/native/fill_holes.py`         | **New.** `ctypes` wrapper class `FillHoles` with `.find_holes()` method. Wraps `meshlib_find_holes_stl` (detect-only, no repair). |
-| `app/main.py`                      | Rewritten (v0.3.0). Loads both native libs at startup, exposes SI + holes + mesh-report endpoints.                                |
-| `requirements.txt`                 | Removed `wasmtime`, `pydantic`. Added `python-multipart` (for file uploads).                                                      |
-| `README.md`                        | Full rewrite with architecture diagram and build/run instructions.                                                                |
+| File                               | Change                                                                                                                                          |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/wasm/` (entire directory)     | **Deleted.** Removed the `wasmtime` loader, `.wasm` binary, and all WASI code.                                                                  |
+| `app/native/self_intersections.py` | **New.** `ctypes` wrapper class `SelfIntersections` with `.detect()` and `.repair()` methods matching the C signatures exactly.                 |
+| `app/native/fill_holes.py`         | **New.** `ctypes` wrapper class `FillHoles` with `.find_holes()` method. Wraps `meshlib_find_holes_stl` (detect-only, no repair).               |
+| `app/native/bad_edges.py`          | **New.** `ctypes` wrapper class `BadEdges` with deterministic Phase A diagnostics (`bad_edges`, `bad_contours`, boundary/non-manifold details). |
+| `app/main.py`                      | Rewritten (v0.3.0). Loads both native libs at startup, exposes SI + holes + mesh-report endpoints.                                              |
+| `requirements.txt`                 | Removed `wasmtime`, `pydantic`. Added `python-multipart` (for file uploads).                                                                    |
+| `README.md`                        | Full rewrite with architecture diagram and build/run instructions.                                                                              |
 
 ---
 
@@ -157,13 +192,14 @@ MESHLIB_LOCAL_BUILD_ENV=1 build_env=local cmake -B build-native \
     -DMESHLIB_BUILD_WITH_OPEN_MP=OFF \
     -DMESHLIB_GEOMETRY_AS_SUBMODULE=ON
 
-cmake --build build-native --target meshlib_self_intersections_native meshlib_fill_holes_native meshlib_noise_shells_native meshlib_inverted_normals_native
+cmake --build build-native --target meshlib_self_intersections_native meshlib_fill_holes_native meshlib_bad_edges_native meshlib_noise_shells_native meshlib_inverted_normals_native
 ```
 
 This produces:
 
 - `web/native_self_intersections/libmeshlib_self_intersections.dylib` (~1.4 MB)
 - `web/native_fill_holes/libmeshlib_fill_holes.dylib` (~1.2 MB)
+- `web/native_bad_edges/libmeshlib_bad_edges.dylib` (~0.8 MB)
 - `web/native_noise_shells/libmeshlib_noise_shells.dylib` (~1.4 MB)
 - `web/native_inverted_normals/libmeshlib_inverted_normals.dylib` (~1.0 MB)
 
@@ -174,6 +210,7 @@ cd meshlib-python-testing
 bash scripts/build_native_lib.sh
 # → app/native/libmeshlib_self_intersections.so (~1.3 MB)
 # → app/native/libmeshlib_fill_holes.so (~1.1 MB)
+# → app/native/libmeshlib_bad_edges.so (~0.8 MB)
 # → app/native/libmeshlib_noise_shells.so (~1.3 MB)
 # → app/native/libmeshlib_inverted_normals.so (~1.1 MB)
 ```
@@ -222,7 +259,7 @@ The Python service auto-discovers the `.dylib`/`.so` at `../meshlib/web/native_s
 | `-DMESHLIB_BUILD_TESTS=OFF`             | Skip test targets (faster, avoids needing CppUnit)                                                                     |
 | `-DMESHLIB_BUILD_APP_TARGETS=OFF`       | Skip the CLI app targets (mesh_compare, mesh_converter, etc.)                                                          |
 | `-DMESHLIB_BUILD_WITH_OPEN_MP=OFF`      | Avoid needing a GCC-compatible OpenMP runtime on macOS                                                                 |
-| `-DMESHLIB_BUILD_NATIVE_PYTHON_LIBS=ON` | Enables native shared-library targets (self-intersections + fill-holes + noise-shells + inverted-normals)              |
+| `-DMESHLIB_BUILD_NATIVE_PYTHON_LIBS=ON` | Enables native shared-library targets (self-intersections + fill-holes + bad-edges + noise-shells + inverted-normals)  |
 
 ---
 
@@ -267,7 +304,7 @@ This:
 2. Mounts the meshlib repo (read-only)
 3. Runs the same cmake + build inside Linux
 4. Copies the resulting `.so` to `app/native/libmeshlib_self_intersections.so`
-5. Copies all generated `.so` outputs to `app/native/` (`self_intersections`, `fill_holes`, `noise_shells`, `inverted_normals`)
+5. Copies all generated `.so` outputs to `app/native/` (`self_intersections`, `fill_holes`, `bad_edges`, `noise_shells`, `inverted_normals`)
 
 For case-manager, copy/update the Linux libs and rebuild the service:
 
@@ -286,7 +323,7 @@ docker exec python-services-prd-svc-case-manager-1 sh -lc "nm -D /usr/prd-svc-ca
 Then commit it:
 
 ```bash
-git add app/native/libmeshlib_self_intersections.so app/native/libmeshlib_fill_holes.so app/native/libmeshlib_noise_shells.so app/native/libmeshlib_inverted_normals.so
+git add app/native/libmeshlib_self_intersections.so app/native/libmeshlib_fill_holes.so app/native/libmeshlib_bad_edges.so app/native/libmeshlib_noise_shells.so app/native/libmeshlib_inverted_normals.so
 git commit -m "Add Linux native mesh libraries (.so)"
 git push
 ```
@@ -313,12 +350,40 @@ meshlib/
       self_intersections_api.cpp          ← THE shared C++ source
       meshlib_self_intersections.js
       meshlib_self_intersections.wasm
+    wasm_fill_holes/
+      CMakeLists.txt
+      fill_holes_api.cpp
+      meshlib_fill_holes.js
+      meshlib_fill_holes.wasm
+    wasm_overlapping_triangles/
+      CMakeLists.txt
+      overlapping_triangles_api.cpp
+      meshlib_overlapping_triangles.js
+      meshlib_overlapping_triangles.wasm
+    wasm_bad_edges/
+      CMakeLists.txt
+      bad_edges_api.cpp
+      meshlib_bad_edges.js
+      meshlib_bad_edges.wasm
+    wasm_noise_shells/
+      CMakeLists.txt
+      noise_shells_api.cpp
+      meshlib_noise_shells.js
+      meshlib_noise_shells.wasm
+    wasm_inverted_normals/
+      CMakeLists.txt
+      inverted_normals_api.cpp
+      meshlib_inverted_normals.js
+      meshlib_inverted_normals.wasm
     native_self_intersections/            ← NEW
       CMakeLists.txt                      ← gcc → .dylib / .so
       libmeshlib_self_intersections.dylib   (after build, ~1.4 MB)
     native_fill_holes/                    ← NEW
       CMakeLists.txt                      ← gcc → .dylib / .so
       libmeshlib_fill_holes.dylib           (after build, ~1.2 MB)
+    native_bad_edges/                    ← NEW
+      CMakeLists.txt                      ← gcc → .dylib / .so
+      libmeshlib_bad_edges.dylib           (after build, ~0.8 MB)
     native_noise_shells/                  ← NEW
       CMakeLists.txt                      ← gcc → .dylib / .so
       libmeshlib_noise_shells.dylib         (after build, ~1.4 MB)
@@ -331,6 +396,7 @@ meshlib-python-testing/
     native/
       self_intersections.py               ← ctypes wrapper (SI detect + repair)
       fill_holes.py                       ← ctypes wrapper (hole detection)
+      bad_edges.py                        ← ctypes wrapper (bad-edges + bad-contours diagnostics)
       noise_shells.py                     ← ctypes wrapper (noise-shell detect + remove)
       inverted_normals.py                 ← ctypes wrapper (closed-mesh inversion detect + repair)
     main.py                               ← FastAPI endpoints (v0.3.0)
