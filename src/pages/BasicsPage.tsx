@@ -11,6 +11,8 @@ import IntersectionLines from '../components/IntersectionLines'
 import { FillHolesClient } from '../lib/fillHolesClient'
 import { SelfIntersectionsClient } from '../lib/selfIntersectionsClient'
 import { InvertedNormalsClient } from '../lib/invertedNormalsClient'
+import { OverlappingTrianglesClient } from '../lib/overlappingTrianglesClient'
+import { BadEdgesClient } from '../lib/badEdgesClient'
 import { CanvasContainer } from '../styles/CanvasContainer'
 
 const STL_FILES = [
@@ -43,9 +45,17 @@ function BasicsPage() {
     const [signedVolume, setSignedVolume] = useState<number | null>(null)
     const [localInvertedCount, setLocalInvertedCount] = useState<number | null>(null)
 
+    const [isDetectingOverlapping, setIsDetectingOverlapping] = useState(false)
+    const [overlappingCount, setOverlappingCount] = useState<number | null>(null)
+    const [isDetectingBadEdges, setIsDetectingBadEdges] = useState(false)
+    const [badEdgesCount, setBadEdgesCount] = useState<number | null>(null)
+    const [badContoursCount, setBadContoursCount] = useState<number | null>(null)
+
     const fillHolesClientRef = useRef<FillHolesClient | null>(null)
     const selfIntersectionsClientRef = useRef<SelfIntersectionsClient | null>(null)
     const invertedNormalsClientRef = useRef<InvertedNormalsClient | null>(null)
+    const overlappingTrianglesClientRef = useRef<OverlappingTrianglesClient | null>(null)
+    const badEdgesClientRef = useRef<BadEdgesClient | null>(null)
 
     useEffect(() => {
         const client = new FillHolesClient()
@@ -54,6 +64,10 @@ function BasicsPage() {
         selfIntersectionsClientRef.current = siClient
         const inClient = new InvertedNormalsClient()
         invertedNormalsClientRef.current = inClient
+        const overlapClient = new OverlappingTrianglesClient()
+        overlappingTrianglesClientRef.current = overlapClient
+        const beClient = new BadEdgesClient()
+        badEdgesClientRef.current = beClient
         return () => {
             fillHolesClientRef.current = null
             client.dispose()
@@ -61,6 +75,10 @@ function BasicsPage() {
             siClient.dispose()
             invertedNormalsClientRef.current = null
             inClient.dispose()
+            overlappingTrianglesClientRef.current = null
+            overlapClient.dispose()
+            badEdgesClientRef.current = null
+            beClient.dispose()
         }
     }, [])
 
@@ -75,6 +93,9 @@ function BasicsPage() {
         setIsInvertedNormals(null)
         setSignedVolume(null)
         setLocalInvertedCount(null)
+        setOverlappingCount(null)
+        setBadEdgesCount(null)
+        setBadContoursCount(null)
     }, [selectedFile])
 
     async function onFillHoles() {
@@ -220,6 +241,70 @@ function BasicsPage() {
         }
     }
 
+    async function onDetectOverlappingTriangles() {
+        const client = overlappingTrianglesClientRef.current
+        if (!selectedFile || isDetectingOverlapping || !client) return
+
+        setIsDetectingOverlapping(true)
+        setError('')
+        setStatus('Loading STL…')
+        setOverlappingCount(null)
+        try {
+            const input = await fetchStlBuffer()
+            setStatus('Detecting overlapping triangles (WASM)…')
+            const startMs = performance.now()
+            const result = await client.detect(input, {
+                onStatus: (stage) => setStatus(stage),
+            })
+            const elapsedMs = performance.now() - startMs
+            setOverlappingCount(result.count)
+            setStatus(
+                result.count === 0
+                    ? `No overlapping triangles found (${elapsedMs.toFixed(0)} ms)`
+                    : `Found ${result.count} overlapping triangle(s) (${elapsedMs.toFixed(0)} ms)`,
+            )
+        } catch (e: any) {
+            console.error('[DetectOverlappingTriangles] failed:', e)
+            setError(String(e?.message || e))
+            setStatus('')
+        } finally {
+            setIsDetectingOverlapping(false)
+        }
+    }
+
+    async function onDetectBadEdges() {
+        const client = badEdgesClientRef.current
+        if (!selectedFile || isDetectingBadEdges || !client) return
+
+        setIsDetectingBadEdges(true)
+        setError('')
+        setStatus('Loading STL…')
+        setBadEdgesCount(null)
+        setBadContoursCount(null)
+        try {
+            const input = await fetchStlBuffer()
+            setStatus('Detecting bad edges (WASM)…')
+            const startMs = performance.now()
+            const result = await client.detect(input, {
+                onStatus: (stage) => setStatus(stage),
+            })
+            const elapsedMs = performance.now() - startMs
+            setBadEdgesCount(result.badEdgesCount)
+            setBadContoursCount(result.badContoursCount)
+            setStatus(
+                result.badEdgesCount === 0
+                    ? `No bad edges found (${elapsedMs.toFixed(0)} ms)`
+                    : `Found ${result.badEdgesCount} bad edge(s), ${result.badContoursCount} contour(s) (${elapsedMs.toFixed(0)} ms)`,
+            )
+        } catch (e: any) {
+            console.error('[DetectBadEdges] failed:', e)
+            setError(String(e?.message || e))
+            setStatus('')
+        } finally {
+            setIsDetectingBadEdges(false)
+        }
+    }
+
     async function onRepairInvertedNormals() {
         const client = invertedNormalsClientRef.current
         if (!selectedFile || isRepairingInverted || !client) return
@@ -259,7 +344,14 @@ function BasicsPage() {
         }
     }
 
-    const isBusy = isFilling || isDetecting || isRepairing || isCheckingInverted || isRepairingInverted
+    const isBusy =
+        isFilling ||
+        isDetecting ||
+        isRepairing ||
+        isCheckingInverted ||
+        isRepairingInverted ||
+        isDetectingOverlapping ||
+        isDetectingBadEdges
     const showSideBySide = Boolean(repairedStl)
     const offsetX = 40
 
@@ -394,6 +486,44 @@ function BasicsPage() {
                         {signedVolume !== null && isClosedMesh ? ` — vol=${signedVolume.toFixed(4)}` : ''}
                     </span>
                 )}
+                {overlappingCount !== null && (
+                    <span style={{
+                        color: overlappingCount === 0 ? '#4ade80' : '#fbbf24',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        background: 'rgba(15,23,42,0.85)',
+                        padding: '4px 10px',
+                        borderRadius: 8,
+                    }}>
+                        {overlappingCount === 0
+                            ? '✓ No overlapping triangles'
+                            : `⚠ ${overlappingCount} overlapping triangle(s)`}
+                    </span>
+                )}
+                {badEdgesCount !== null && (
+                    <span style={{
+                        color: badEdgesCount === 0 ? '#4ade80' : '#fbbf24',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        background: 'rgba(15,23,42,0.85)',
+                        padding: '4px 10px',
+                        borderRadius: 8,
+                    }}>
+                        {badEdgesCount === 0
+                            ? '✓ No bad edges'
+                            : `⚠ ${badEdgesCount} bad edge(s), ${badContoursCount ?? 0} contour(s)`}
+                    </span>
+                )}
+                <HelloButton
+                    onClick={onDetectBadEdges}
+                    disabled={!selectedFile || isBusy}
+                    text={isDetectingBadEdges ? 'Detecting…' : 'Detect Bad Edges'}
+                />
+                <HelloButton
+                    onClick={onDetectOverlappingTriangles}
+                    disabled={!selectedFile || isBusy}
+                    text={isDetectingOverlapping ? 'Detecting…' : 'Detect Overlapping Triangles'}
+                />
                 <HelloButton
                     onClick={onCheckInvertedNormals}
                     disabled={!selectedFile || isBusy}

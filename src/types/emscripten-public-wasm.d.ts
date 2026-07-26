@@ -105,3 +105,18 @@ declare module "@wasm/meshlib_inverted_normals.js" {
   const createModule: any;
   export default createModule;
 }
+
+declare module "*.meshlib_repair_pipeline.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "../wasm/meshlib_repair_pipeline.js" {
+  const createModule: any;
+  export default createModule;
+}
+
+declare module "@wasm/meshlib_repair_pipeline.js" {
+  const createModule: any;
+  export default createModule;
+}
