@@ -1,32 +1,23 @@
 {
   "folders": [
     {
-      "path": "../meshlib",
+      "path": "../meshlib"
     },
     {
-      "path": ".",
+      "path": "."
     },
     {
-      "path": "../SykloneAll/Frontend/pkg-syklone-js",
+      "path": "../meshlib-docker-compiler"
     },
     {
-      "path": "../SykloneAll/Frontend/web-platform-creator",
+      "path": "../SykloneAll/prd-svc-case-manager"
     },
     {
-      "path": "../meshlib-python-testing",
+      "path": "../SykloneAll/Syklone/prd-svc-case-manager"
     },
     {
-      "path": "../meshlib-docker-compiler",
-    },
-    {
-      "path": "../SykloneAll/prd-svc-case-manager",
-    },
-    {
-      "path": "../SykloneAll/Syklone/prd-svc-case-manager",
-    },
-    {
-      "path": "../meshlib-compiler-for-wasm",
-    },
+      "path": "../meshlib-python-testing"
+    }
   ],
   "settings": {
     "liveServer.settings.multiRootWorkspaceName": "meshlib",

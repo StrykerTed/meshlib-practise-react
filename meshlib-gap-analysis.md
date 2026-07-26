@@ -90,19 +90,20 @@ Clarify with the team what "bad edges" means in this context. All the common int
 
 ---
 
-### 6. Overlapping Triangles — ❌ Gap
+### 6. Overlapping Triangles — ✅ Implemented (with known parity differences)
 
-| Aspect        | Status                   |
-| ------------- | ------------------------ |
-| **Detection** | Not available in MeshLib |
-| **Repair**    | Not available in MeshLib |
+| Aspect        | Status                                                               |
+| ------------- | -------------------------------------------------------------------- |
+| **Detection** | Implemented via custom MeshLib C++ + WASM/native overlap detector    |
+| **Repair**    | Not currently implemented (detection-only path for this requirement) |
 
-Self-intersection detection (`DetectSelfIntersections`) handles triangles that **cross through** each other, but **not** coplanar triangles that overlap (share the same plane and partially/fully coincide). A codebase search for "overlap", "duplicate face", "duplicate triangle", "touching face", and "coplanar" in all algorithm headers returned no matches.
+Self-intersection detection (`DetectSelfIntersections`) handles triangles that **cross through** each other, but **not** coplanar triangles that overlap (share the same plane and partially/fully coincide). To close this gap, we implemented a custom overlap detector and integrated it into the current mesh-check pipeline.
 
-#### Possible Workarounds
+#### Current Behavior / Known Differences
 
-- **Custom WASM function**: Compare face normals + plane equations, then check 2D overlap of projected triangles for faces on the same plane.
-- **Approximate approach**: Use `Statistics::FaceAreas()` + `Statistics::FaceIsotropies()` to flag near-zero-area or degenerate faces that might indicate overlaps, but this isn't a true overlap test.
+- The detector is production-integrated and classed as done for delivery.
+- Known differences vs Magics remain on a small subset of files (policy/semantic deltas rather than proven algorithm failure).
+- Strict mode remains the baseline behavior; compatibility behavior exists but is not the default.
 
 ---
 
@@ -114,7 +115,7 @@ Self-intersection detection (`DetectSelfIntersections`) handles triangles that *
 | 2   | Bad Edges              | ⚠️ Needs definition | `IsBorderHalfEdge`, `GenerateHalfEdges`, `DetectShortEdges`, `EdgeAngles` | `RepairMesh()`                          | Clarify what "bad" means               |
 | 3   | Planar Holes           | ✅ Full             | `FindHoles()`                                                             | `FillHole_EarClipping()`                | Proven in WASM demo                    |
 | 4   | Noise Shells           | ✅ Full             | `DetectComponents()`                                                      | `RepairMesh()` with area ratio          | Configurable threshold                 |
-| 5   | Overlapping Triangles  | ❌ Gap              | Not available                                                             | Not available                           | Would need custom implementation       |
+| 5   | Overlapping Triangles  | ✅ Implemented      | Custom overlap detector (native/WASM)                                     | N/A (detection requirement delivered)   | Known parity differences vs Magics     |
 | 6   | Intersecting Triangles | ✅ Full             | `DetectSelfIntersections()`                                               | `RepairMesh()`                          | Fine-grained API also available        |
 
 ## Simple Status List (Done vs Not Done)
@@ -124,7 +125,7 @@ Self-intersection detection (`DetectSelfIntersections`) handles triangles that *
 - 🟢 Intersecting Triangles — Done
 - 🟢 Inverted Normals — Done (closed-mesh global check + repair)
 - 🔴 Bad Edges — Not Done
-- 🔴 Overlapping Triangles — Not Done
+- 🟢 Overlapping Triangles — Done (with known parity differences)
 - 🟢 CMake for WASM target(s) — Done
 - 🟢 CMake for Python native libraries (`.dylib` / `.so`) — Done
 - 🟢 Linux `.so` generation via Docker script — Done
@@ -164,7 +165,7 @@ MeshLib provides a single-call comprehensive repair via `MeshRepair_C::RepairMes
 ## Conclusions
 
 - **3 of 6** requirements are fully met out of the box.
-- **2 of 6** are effectively met but need minor clarification or a thin detection wrapper.
-- **1 of 6** (Overlapping Triangles) is a genuine gap requiring custom implementation.
+- **1 of 6** (Overlapping Triangles) is now implemented via a custom detector and integrated in the pipeline.
+- **2 of 6** still need clarification or thin wrapper logic (`Bad Edges` definition and open-mesh nuance for `Inverted Normals`).
 - The STL-in / STL-out WASM pattern (proven with FillHoles) can be reused for the full `MeshRepair_C` pipeline.
 - The `MeshRepair_C::RepairMesh()` single-call approach covers most requirements and would be the recommended starting point for the WASM integration.
